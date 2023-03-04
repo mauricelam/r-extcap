@@ -71,7 +71,7 @@ To create an extcap using this library, these are the high level steps:
 # Example
 
 ```rs
-# use lazy_static::lazy_static;
+use lazy_static::lazy_static;
 use clap::Parser;
 use r_extcap::{ExtcapApplication, ExtcapArgs};
 use r_extcap::{interface::*, controls::*, config::*};
