@@ -1,5 +1,7 @@
 # Write Wireshark extcap programs in Rust
 
+### [Documentation](https://docs.rs/r-extcap/latest)
+
 The extcap interface is a versatile plugin interface used by Wireshark to
 allow external binaries to act as capture interfaces. The extcap interface
 itself is generic and can be used by applications other than Wireshark, like
@@ -25,10 +27,10 @@ documentation we will refer to the host application simply as Wireshark.
 
 To create an extcap using this library, these are the high level steps:
 
-1. Create a struct with `#[derive(clap::Parser)]`, and add [`ExtcapArgs`] as
+1. Create a struct with `#[derive(clap::Parser)]`, and add `ExtcapArgs` as
    one of the fields with the `#[command(flatten)]` attribute.
 
-   ```
+   ```rs
    #[derive(Debug, clap::Parser)]
    struct AppArgs {
        #[command(flatten)]
@@ -38,27 +40,26 @@ To create an extcap using this library, these are the high level steps:
    }
    ```
 
-2. Create a struct that implements [`ExtcapApplication`]. It is recommended
+2. Create a struct that implements `ExtcapApplication`. It is recommended
    to define the application in a `lazy_static`. There 4 things need to be
    provided for an extcap implementation:
 
-    1. [`metadata`][ExtcapApplication::metadata]: The version information
-           and metadata for this program, used by Wireshark to display in
-           the UI.
-    2. [`interfaces`][ExtcapApplication::interfaces]: The list of interfaces
+    1. `metadata`: The version information and metadata for this program,
+            used by Wireshark to display in the UI.
+    2. `interfaces`: The list of interfaces
            that can be captured by this program.
-    3. [`toolbar_controls`][ExtcapApplication::toolbar_controls]: Optional,
+    3. `toolbar_controls`: Optional,
            a list of toolbar controls shown in the Wireshark UI.
-    4. [`configs`][ExtcapApplication::configs]: Optional, a list of UI
+    4. `configs`: Optional, a list of UI
            configuration options that the user can change.
 
-3. In the `main` function, parse the arguments and call [`ExtcapArgs::run`].
-   Use the returned [`CaptureContext`] to start capturing packets, and write
-   the packets to [`CaptureContext::fifo`] using the
+3. In the `main` function, parse the arguments and call `ExtcapArgs::run`.
+   Use the returned `CaptureContext` to start capturing packets, and write
+   the packets to `CaptureContext::fifo` using the
    [`pcap_file`](https://docs.rs/pcap-file/latest/pcap_file/index.html)
    crate.
 
-   ```ignore
+   ```rs
    fn main() -> anyhow::Result<()> {
        if let Some(capture_context) = AppArgs::parse().extcap.run(&*APPLICATION)? {
            // Run capture
@@ -69,7 +70,7 @@ To create an extcap using this library, these are the high level steps:
 
 # Example
 
-```no_run
+```rs
 # use lazy_static::lazy_static;
 use clap::Parser;
 use r_extcap::{ExtcapApplication, ExtcapArgs};
