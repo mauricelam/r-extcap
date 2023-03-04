@@ -33,7 +33,7 @@
 //!    #[derive(Debug, clap::Parser)]
 //!    struct AppArgs {
 //!        #[command(flatten)]
-//!        extcap: rust_extcap::ExtcapArgs,
+//!        extcap: r_extcap::ExtcapArgs,
 //!
 //!        // Other args for extcap (see the `configs` module)
 //!    }
@@ -73,8 +73,8 @@
 //! ```no_run
 //! # use lazy_static::lazy_static;
 //! use clap::Parser;
-//! use rust_extcap::{ExtcapApplication, ExtcapArgs};
-//! use rust_extcap::{interface::*, controls::*, config::*};
+//! use r_extcap::{ExtcapApplication, ExtcapArgs};
+//! use r_extcap::{interface::*, controls::*, config::*};
 //!
 //! struct ExampleExtcapApplication {}
 //! impl ExtcapApplication for ExampleExtcapApplication {
@@ -136,7 +136,7 @@ pub mod interface;
 /// #[command(author, version, about)]
 /// pub struct ApplicationArgs {
 ///    #[command(flatten)]
-///    extcap: rust_extcap::ExtcapArgs,
+///    extcap: r_extcap::ExtcapArgs,
 ///
 ///    // Other application args
 /// }
@@ -273,7 +273,7 @@ pub struct ExtcapArgs {
     /// (defaults to `false`), the entry can be marked as reloadable.
     ///
     /// ```
-    /// use rust_extcap::config::{ConfigOptionValue, SelectorConfig, Reload};
+    /// use r_extcap::config::{ConfigOptionValue, SelectorConfig, Reload};
     ///
     /// SelectorConfig::builder()
     ///     .config_number(3)
@@ -560,7 +560,7 @@ impl<'a> CaptureContext<'a> {
 /// # let executable_path = exe.to_string_lossy();
 /// # let exe_name = exe.file_name().unwrap().to_string_lossy();
 /// assert_eq!(
-///     rust_extcap::installation_instructions(),
+///     r_extcap::installation_instructions(),
 ///     formatdoc!{"
 ///         This is an extcap plugin meant to be used with Wireshark or tshark.
 ///         To install this plugin for use with Wireshark, symlink or copy this executable \
@@ -757,8 +757,8 @@ pub trait ExtcapApplication {
 /// `Display` trait, and the Extcap output can be printed out like this:
 ///
 /// ```
-/// use rust_extcap::interface::Metadata;
-/// # use rust_extcap::ExtcapFormatter;
+/// use r_extcap::interface::Metadata;
+/// # use r_extcap::ExtcapFormatter;
 ///
 /// print!("{}", ExtcapFormatter(&Metadata {
 ///     version: "1.0".into(),

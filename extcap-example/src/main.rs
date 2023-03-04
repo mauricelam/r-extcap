@@ -5,7 +5,7 @@ use pcap_file::{
     pcap::{PcapHeader, PcapPacket, PcapWriter},
     DataLink,
 };
-use rust_extcap::{
+use r_extcap::{
     config::*,
     controls::synchronous::{ExtcapControlSender, ExtcapControlSenderTrait},
     controls::*,
@@ -199,13 +199,13 @@ lazy_static! {
         ]).build();
 
     static ref APPLICATION: ExampleExtcapApplication = ExampleExtcapApplication {
-        metadata: rust_extcap::interface::Metadata {
+        metadata: r_extcap::interface::Metadata {
             help_url: "http://www.wireshark.org".into(),
             display_description: "Rust Example extcap interface".into(),
-            ..rust_extcap::cargo_metadata!()
+            ..r_extcap::cargo_metadata!()
         },
         interfaces: vec![
-            rust_extcap::interface::Interface {
+            r_extcap::interface::Interface {
                 value: "rs-example1".into(),
                 display: "Rust Example interface 1 for extcap".into(),
                 dlt: Dlt {
@@ -214,7 +214,7 @@ lazy_static! {
                     display: "Demo Implementation for Extcap".into(),
                 },
             },
-            rust_extcap::interface::Interface {
+            r_extcap::interface::Interface {
                 value: "rs-example2".into(),
                 display: "Rust Example interface 2 for extcap".into(),
                 dlt: Dlt {
@@ -337,7 +337,7 @@ fn control_write_defaults(
 #[derive(Debug, Parser)]
 pub struct AppArgs {
     #[command(flatten)]
-    extcap: rust_extcap::ExtcapArgs,
+    extcap: r_extcap::ExtcapArgs,
 
     /// Demonstrates a verification bool flag
     #[arg(long)]
@@ -388,11 +388,11 @@ pub struct ExampleExtcapApplication {
 }
 
 impl ExtcapApplication for ExampleExtcapApplication {
-    fn metadata(&self) -> &rust_extcap::interface::Metadata {
+    fn metadata(&self) -> &r_extcap::interface::Metadata {
         &self.metadata
     }
 
-    fn interfaces(&self) -> &[rust_extcap::interface::Interface] {
+    fn interfaces(&self) -> &[r_extcap::interface::Interface] {
         &self.interfaces
     }
 
@@ -702,7 +702,7 @@ fn validate_capture_filter(filter: &str) {
 mod test {
     use super::AppArgs;
     use clap::CommandFactory;
-    use rust_extcap::cargo_metadata;
+    use r_extcap::cargo_metadata;
 
     #[test]
     fn test_parse() {

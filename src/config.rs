@@ -53,7 +53,7 @@ impl std::fmt::Debug for Reload {
 ///
 /// ## Example
 /// ```
-/// use rust_extcap::config::*;
+/// use r_extcap::config::*;
 ///
 /// let selector = SelectorConfig::builder()
 ///     .config_number(3)
@@ -145,7 +145,7 @@ generate_config_ext!(SelectorConfig);
 ///
 /// ## Example
 /// ```
-/// use rust_extcap::config::*;
+/// use r_extcap::config::*;
 ///
 /// let radio = RadioConfig::builder()
 ///     .config_number(3)
@@ -227,7 +227,7 @@ generate_config_ext!(RadioConfig);
 ///
 /// ## Example
 /// ```
-/// use rust_extcap::config::*;
+/// use r_extcap::config::*;
 ///
 /// let config = MultiCheckConfig::builder()
 ///     .config_number(3)
@@ -368,7 +368,7 @@ impl PrintSentence for (&MultiCheckValue, u8, Option<&MultiCheckValue>) {
 ///
 /// ## Example
 /// ```
-/// use rust_extcap::config::*;
+/// use r_extcap::config::*;
 ///
 /// let config = LongConfig::builder()
 ///     .config_number(0)
@@ -443,7 +443,7 @@ generate_config_ext!(LongConfig);
 ///
 /// ## Example
 /// ```
-/// use rust_extcap::config::*;
+/// use r_extcap::config::*;
 ///
 /// let config = IntegerConfig::builder()
 ///     .config_number(0)
@@ -518,7 +518,7 @@ generate_config_ext!(IntegerConfig);
 ///
 /// ## Example
 /// ```
-/// use rust_extcap::config::*;
+/// use r_extcap::config::*;
 ///
 /// let config = UnsignedConfig::builder()
 ///     .config_number(0)
@@ -593,7 +593,7 @@ generate_config_ext!(UnsignedConfig);
 ///
 /// ## Example
 /// ```
-/// use rust_extcap::config::*;
+/// use r_extcap::config::*;
 ///
 /// let config = DoubleConfig::builder()
 ///     .config_number(0)
@@ -667,7 +667,7 @@ generate_config_ext!(DoubleConfig);
 ///
 /// ## Example
 /// ```
-/// use rust_extcap::config::*;
+/// use r_extcap::config::*;
 ///
 /// let config = StringConfig::builder()
 ///     .config_number(1)
@@ -774,7 +774,7 @@ generate_config_ext!(StringConfig);
 ///
 /// ## Example
 /// ```
-/// use rust_extcap::config::*;
+/// use r_extcap::config::*;
 ///
 /// let config = PasswordConfig::builder()
 ///     .config_number(0)
@@ -858,7 +858,7 @@ generate_config_ext!(PasswordConfig);
 ///
 /// ## Example
 /// ```
-/// use rust_extcap::config::*;
+/// use r_extcap::config::*;
 ///
 /// let config = TimestampConfig::builder()
 ///     .config_number(9)
@@ -922,7 +922,7 @@ generate_config_ext!(TimestampConfig);
 ///
 /// ## Example
 /// ```
-/// use rust_extcap::config::*;
+/// use r_extcap::config::*;
 ///
 /// let config = FileSelectConfig::builder()
 ///     .config_number(3)
@@ -1008,7 +1008,7 @@ generate_config_ext!(FileSelectConfig);
 ///
 /// ## Example
 /// ```
-/// use rust_extcap::config::*;
+/// use r_extcap::config::*;
 ///
 /// let config = BooleanConfig::builder()
 ///     .config_number(2)

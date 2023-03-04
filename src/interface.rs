@@ -30,8 +30,8 @@ pub struct Metadata {
 /// ## Example
 ///
 /// ```
-/// # use rust_extcap::ExtcapFormatter;
-/// use rust_extcap::interface::Metadata;
+/// # use r_extcap::ExtcapFormatter;
+/// use r_extcap::interface::Metadata;
 ///
 /// let metadata = Metadata {
 ///     version: "3.2.1-test".into(),
@@ -79,8 +79,8 @@ pub struct Interface {
 }
 
 /// ```
-/// use rust_extcap::config::ExtcapFormatter;
-/// use rust_extcap::interface::{DataLink, Dlt, Interface};
+/// use r_extcap::config::ExtcapFormatter;
+/// use r_extcap::interface::{DataLink, Dlt, Interface};
 /// # let dlt = Dlt {
 /// #     data_link_type: DataLink::ETHERNET,
 /// #     name: "ETHERNET".into(),
@@ -125,8 +125,8 @@ pub struct Dlt {
 ///
 /// ## Example
 /// ```
-/// use rust_extcap::config::ExtcapFormatter;
-/// use rust_extcap::interface::{DataLink, Dlt};
+/// use r_extcap::config::ExtcapFormatter;
+/// use r_extcap::interface::{DataLink, Dlt};
 ///
 /// let dlt = Dlt {
 ///     data_link_type: DataLink::ETHERNET,
