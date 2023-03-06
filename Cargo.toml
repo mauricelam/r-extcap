@@ -11,6 +11,9 @@ license = "MIT"
 keywords = ["extcap", "wireshark", "pcap"]
 categories = ["parser-implementations", "command-line-utilities"]
 
+[workspace]
+members = ["extcap-example"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

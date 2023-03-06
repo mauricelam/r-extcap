@@ -388,12 +388,12 @@ pub struct ExampleExtcapApplication {
 }
 
 impl ExtcapApplication for ExampleExtcapApplication {
-    fn metadata(&self) -> &r_extcap::interface::Metadata {
+    fn metadata(&self) -> &Metadata {
         &self.metadata
     }
 
-    fn interfaces(&self) -> &[r_extcap::interface::Interface] {
-        &self.interfaces
+    fn interfaces(&self) -> Vec<&Interface> {
+        self.interfaces.iter().collect()
     }
 
     fn toolbar_controls(&self) -> Vec<&dyn ToolbarControl> {

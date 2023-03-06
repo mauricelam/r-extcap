@@ -79,7 +79,7 @@
 //! struct ExampleExtcapApplication {}
 //! impl ExtcapApplication for ExampleExtcapApplication {
 //!       fn metadata(&self) -> &Metadata { todo!() }
-//!       fn interfaces(&self) -> &[Interface] { todo!() }
+//!       fn interfaces(&self) -> Vec<&Interface> { todo!() }
 //!       fn toolbar_controls(&self) -> Vec<&dyn ToolbarControl> { todo!() }
 //!       fn configs(&self, interface: &Interface) -> Vec<&dyn ConfigTrait> { todo!() }
 //! }
@@ -647,7 +647,8 @@ pub enum ListConfigError {
 }
 
 /// The main entry point to implementing an extcap program. This application can
-/// be run by passing it into [`ExtcapArgs::run`].
+/// be run by passing it into [`ExtcapArgs::run`]. For details on how to use
+/// this, see the [crate] documentation.
 pub trait ExtcapApplication {
     /// Returns the metadata like version info and help URL for this program.
     /// This is used by Wireshark to display in the UI.
@@ -663,7 +664,7 @@ pub trait ExtcapApplication {
     /// interface list should stay as consistent as possible. If the list of
     /// interfaces can change, the extcap program must be prepared to handle
     /// `UnknownInterface` from the result.
-    fn interfaces(&self) -> &[Interface];
+    fn interfaces(&self) -> Vec<&Interface>;
 
     /// List the toolbar controls for this interface. In Wireshark, this is
     /// presented to the user in View > Interface Toolbars. See the
@@ -695,7 +696,7 @@ pub trait ExtcapApplication {
     fn list_configs(&self, interface: &str) -> Result<(), ListConfigError> {
         let interface_obj = self
             .interfaces()
-            .iter()
+            .into_iter()
             .find(|i| i.value == interface)
             .ok_or_else(|| ListConfigError::UnknownInterface(String::from(interface)))?;
         for config in self.configs(interface_obj) {
@@ -710,7 +711,7 @@ pub trait ExtcapApplication {
     fn reload_config(&self, interface: &str, config: &str) -> Result<(), ReloadConfigError> {
         let i = self
             .interfaces()
-            .iter()
+            .into_iter()
             .find(|i| i.value == interface)
             .ok_or_else(|| ReloadConfigError::UnknownInterface(String::from(interface)))?;
         let selector_config = self
