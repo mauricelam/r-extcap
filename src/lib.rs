@@ -39,34 +39,29 @@
 //!    }
 //!    ```
 //!
-//! 2. Create a struct that implements [`ExtcapApplication`]. It is recommended
-//!    to define the application in a `lazy_static`. There 4 things need to be
-//!    provided for an extcap implementation:
-//!
-//!     1. [`metadata`][ExtcapApplication::metadata]: The version information
-//!            and metadata for this program, used by Wireshark to display in
-//!            the UI.
-//!     2. [`interfaces`][ExtcapApplication::interfaces]: The list of interfaces
-//!            that can be captured by this program.
-//!     3. [`toolbar_controls`][ExtcapApplication::toolbar_controls]: Optional,
-//!            a list of toolbar controls shown in the Wireshark UI.
-//!     4. [`configs`][ExtcapApplication::configs]: Optional, a list of UI
-//!            configuration options that the user can change.
+//! 2. In a `lazy_static`, define the necessary [interfaces][Interface],
+//!    [toolbar controls][ToolbarControl], and [configs][ConfigTrait]. If you
+//!    are unsure, you can simply start with the [`Interfaces`][Interface] you
+//!    want to capture and add the others later as needed.
 //!
 //! 3. In the `main` function, parse the arguments and call [`ExtcapArgs::run`].
-//!    Use the returned [`CaptureContext`] to start capturing packets, and write
-//!    the packets to [`CaptureContext::fifo`] using the
+//!    Use the returned [`ExtcapStep`] to perform the requested operation. There
+//!    are 5 steps:
+//!
+//!     1. [`InterfacesStep`]: List the interfaces that can be captured by this
+//!            program, as well as the metadata and toolbar controls associated.
+//!     2. [`DltsStep`]: Prints the DLTs for a given interface.
+//!     3. [`ConfigStep`]: Optional, provide a list of UI configuration options
+//!            that the user can change.
+//!     4. [`ReloadConfigStep`]: Optional, if [`SelectorConfig::reload`] is
+//!            configured in one of the configs, invoked to reload the list of
+//!            options the user can choose from.
+//!     5. [`CaptureStep`]: described below.
+//!
+//!  4. In the [`CaptureStep`], start capturing packets from the external
+//!    interface, and write the packets to [`CaptureContext::fifo`] using the
 //!    [`pcap_file`](https://docs.rs/pcap-file/latest/pcap_file/index.html)
 //!    crate.
-//!
-//!    ```ignore
-//!    fn main() -> anyhow::Result<()> {
-//!        if let Some(capture_context) = AppArgs::parse().extcap.run(&*APPLICATION)? {
-//!            // Run capture
-//!        }
-//!        Ok(())
-//!    }
-//!    ```
 //!
 //! # Example
 //!
@@ -415,7 +410,7 @@ impl ExtcapArgs {
     }
 }
 
-/// Error reported when running the [`ExtcapApplication`].
+/// Error reported when running [`ExtcapArgs::run`].
 #[derive(Debug, Error)]
 pub enum ExtcapError {
     /// The inputs given are not expected input from Wireshark. This can happen
@@ -425,18 +420,6 @@ pub enum ExtcapError {
     /// right location.
     #[error("Missing input extcap command. {}", installation_instructions())]
     NotExtcapInput,
-
-    /// Error when listing config. See [`ListConfigError`].
-    #[error(transparent)]
-    ListConfigError(#[from] ListConfigError),
-
-    /// Error when reloading config. See [`ReloadConfigError`].
-    #[error(transparent)]
-    ReloadConfigError(#[from] ReloadConfigError),
-
-    /// Error when printlng DLTs. See [`PrintDltError`].
-    #[error(transparent)]
-    PrintDltError(#[from] PrintDltError),
 
     /// Error when capturing packets. See [`CaptureError`].
     #[error(transparent)]
@@ -487,9 +470,8 @@ pub enum PrintDltError {
     /// The interface string value given from Wireshark is not found. Wireshark
     /// invokes the extcap program multiple times, first to get the list of
     /// interfaces, then multiple times to get the DLTs. Therefore,
-    /// implementations should make sure that the interfaces returned from
-    /// [`ExtcapApplication::interfaces`] are deterministic and doesn't change
-    /// across invocations of the program.
+    /// implementations should make sure that the list of interfaces stay
+    /// consistent, or be prepared to gracefully handle this error.
     #[error("Cannot list DLT for unknown interface \"{0}\".")]
     UnknownInterface(String),
 }
@@ -499,21 +481,11 @@ pub enum PrintDltError {
 /// clicks on the created reload button.
 #[derive(Debug, Error)]
 pub enum ReloadConfigError {
-    /// The interface string value given from Wireshark is not found. Wireshark
-    /// makes separate invocations to get the initial list of interfaces, and
-    /// when the user subsequently hits reload on a config. Therefore,
-    /// implementations should make sure that the interfaces returned from
-    /// [`ExtcapApplication::interfaces`] are deterministic and doesn't change
-    /// across invocations of the program.
-    #[error("Cannot reload config options for unknown interface \"{0}\".")]
-    UnknownInterface(String),
-
     /// The config `call` value given from Wireshark is not found in the configs
-    /// defined for this [`ExtcapApplication`]. Wireshark makes separate
-    /// invocations to get the initial list of interfaces, and when the user
-    /// subsequently hits reload on a config. Therefore, implementations should
-    /// make sure that the configs used in [`ConfigStep`] and
-    /// [`ReloadConfigStep`] are consistent.
+    /// provided. Wireshark makes separate invocations to get the initial list
+    /// of interfaces, and when the user subsequently hits reload on a config.
+    /// Therefore, implementations should make sure that the configs used in
+    /// [`ConfigStep`] and [`ReloadConfigStep`] are consistent.
     #[error("Cannot reload options for unknown config \"{0}\".")]
     UnknownConfig(String),
 

@@ -46,10 +46,8 @@ impl std::fmt::Debug for Reload {
 /// drop-down list. The list of options should have default=true on exactly one
 /// item.
 ///
-/// Typically, these configs are created in a `lazy_static`, either as their own
-/// static refs, or as fields of your `ExtcapApplication` implementation, and
-/// then returned from
-/// [`ExtcapApplication::configs`][crate::ExtcapApplication::configs].
+/// Typically, these configs are created in a `lazy_static`, and passed to
+/// [`ConfigStep::list_configs`][crate::ConfigStep::list_configs].
 ///
 /// ## Example
 /// ```
@@ -138,10 +136,8 @@ generate_config_ext!(SelectorConfig);
 /// A list of radio buttons for the user to choose one value from. The list of
 /// options should have exactly one item with default=true.
 ///
-/// Typically, these configs are created in a `lazy_static`, either as their own
-/// static refs, or as fields of your `ExtcapApplication` implementation, and
-/// then returned from
-/// [`ExtcapApplication::configs`][crate::ExtcapApplication::configs].
+/// Typically, these configs are created in a `lazy_static`, and passed to
+/// [`ConfigStep::list_configs`][crate::ConfigStep::list_configs].
 ///
 /// ## Example
 /// ```
@@ -220,10 +216,8 @@ generate_config_ext!(RadioConfig);
 /// example below, then `--multi if1,if2a,if2b` will be passed in the command
 /// line.
 ///
-/// Typically, these configs are created in a `lazy_static`, either as their own
-/// static refs, or as fields of your `ExtcapApplication` implementation, and
-/// then returned from
-/// [`ExtcapApplication::configs`][crate::ExtcapApplication::configs].
+/// Typically, these configs are created in a `lazy_static`, and passed to
+/// [`ConfigStep::list_configs`][crate::ConfigStep::list_configs].
 ///
 /// ## Example
 /// ```
@@ -361,10 +355,8 @@ impl PrintSentence for (&MultiCheckValue, u8, Option<&MultiCheckValue>) {
 /// This provides a field for entering a numeric value of the given data type. A
 /// default value may be provided, as well as a range.
 ///
-/// Typically, these configs are created in a `lazy_static`, either as their own
-/// static refs, or as fields of your `ExtcapApplication` implementation, and
-/// then returned from
-/// [`ExtcapApplication::configs`][crate::ExtcapApplication::configs].
+/// Typically, these configs are created in a `lazy_static`, and passed to
+/// [`ConfigStep::list_configs`][crate::ConfigStep::list_configs].
 ///
 /// ## Example
 /// ```
@@ -436,10 +428,8 @@ generate_config_ext!(LongConfig);
 /// This provides a field for entering a numeric value of the given data type. A
 /// default value may be provided, as well as a range.
 ///
-/// Typically, these configs are created in a `lazy_static`, either as their own
-/// static refs, or as fields of your `ExtcapApplication` implementation, and
-/// then returned from
-/// [`ExtcapApplication::configs`][crate::ExtcapApplication::configs].
+/// Typically, these configs are created in a `lazy_static`, and passed to
+/// [`ConfigStep::list_configs`][crate::ConfigStep::list_configs].
 ///
 /// ## Example
 /// ```
@@ -511,10 +501,8 @@ generate_config_ext!(IntegerConfig);
 /// This provides a field for entering a numeric value of the given data type. A
 /// default value may be provided, as well as a range.
 ///
-/// Typically, these configs are created in a `lazy_static`, either as their own
-/// static refs, or as fields of your `ExtcapApplication` implementation, and
-/// then returned from
-/// [`ExtcapApplication::configs`][crate::ExtcapApplication::configs].
+/// Typically, these configs are created in a `lazy_static`, and passed to
+/// [`ConfigStep::list_configs`][crate::ConfigStep::list_configs].
 ///
 /// ## Example
 /// ```
@@ -586,10 +574,8 @@ generate_config_ext!(UnsignedConfig);
 /// This provides a field for entering a numeric value of the given data type. A
 /// default value may be provided, as well as a range.
 ///
-/// Typically, these configs are created in a `lazy_static`, either as their own
-/// static refs, or as fields of your `ExtcapApplication` implementation, and
-/// then returned from
-/// [`ExtcapApplication::configs`][crate::ExtcapApplication::configs].
+/// Typically, these configs are created in a `lazy_static`, and passed to
+/// [`ConfigStep::list_configs`][crate::ConfigStep::list_configs].
 ///
 /// ## Example
 /// ```
@@ -660,10 +646,8 @@ generate_config_ext!(DoubleConfig);
 
 /// A field for entering a text value.
 ///
-/// Typically, these configs are created in a `lazy_static`, either as their own
-/// static refs, or as fields of your `ExtcapApplication` implementation, and
-/// then returned from
-/// [`ExtcapApplication::configs`][crate::ExtcapApplication::configs].
+/// Typically, these configs are created in a `lazy_static`, and passed to
+/// [`ConfigStep::list_configs`][crate::ConfigStep::list_configs].
 ///
 /// ## Example
 /// ```
@@ -767,10 +751,8 @@ generate_config_ext!(StringConfig);
 /// A field for entering text value, but with its value masked in the user
 /// interface. The value of a password field is not saved by Wireshark.
 ///
-/// Typically, these configs are created in a `lazy_static`, either as their own
-/// static refs, or as fields of your `ExtcapApplication` implementation, and
-/// then returned from
-/// [`ExtcapApplication::configs`][crate::ExtcapApplication::configs].
+/// Typically, these configs are created in a `lazy_static`, and passed to
+/// [`ConfigStep::list_configs`][crate::ConfigStep::list_configs].
 ///
 /// ## Example
 /// ```
@@ -851,10 +833,8 @@ generate_config_ext!(PasswordConfig);
 
 /// A config that is displayed as a date/time editor.
 ///
-/// Typically, these configs are created in a `lazy_static`, either as their own
-/// static refs, or as fields of your `ExtcapApplication` implementation, and
-/// then returned from
-/// [`ExtcapApplication::configs`][crate::ExtcapApplication::configs].
+/// Typically, these configs are created in a `lazy_static`, and passed to
+/// [`ConfigStep::list_configs`][crate::ConfigStep::list_configs].
 ///
 /// ## Example
 /// ```
@@ -915,10 +895,8 @@ generate_config_ext!(TimestampConfig);
 
 /// Lets the user provide a file path.
 ///
-/// Typically, these configs are created in a `lazy_static`, either as their own
-/// static refs, or as fields of your `ExtcapApplication` implementation, and
-/// then returned from
-/// [`ExtcapApplication::configs`][crate::ExtcapApplication::configs].
+/// Typically, these configs are created in a `lazy_static`, and passed to
+/// [`ConfigStep::list_configs`][crate::ConfigStep::list_configs].
 ///
 /// ## Example
 /// ```
@@ -1001,10 +979,8 @@ generate_config_ext!(FileSelectConfig);
 
 /// A checkbox configuration with a true/false value.
 ///
-/// Typically, these configs are created in a `lazy_static`, either as their own
-/// static refs, or as fields of your `ExtcapApplication` implementation, and
-/// then returned from
-/// [`ExtcapApplication::configs`][crate::ExtcapApplication::configs].
+/// Typically, these configs are created in a `lazy_static`, and passed to
+/// [`ConfigStep::list_configs`][crate::ConfigStep::list_configs].
 ///
 /// ## Example
 /// ```

@@ -55,15 +55,13 @@ impl PrintSentence for Metadata {
 
 /// Definition of an interface for this extcap program. An interface is an entry
 /// in the Wireshark homepage, similar to `Wi-Fi: en0`. Instances of this should
-/// be returned in
-/// [`ExtcapApplication::interfaces`][crate::ExtcapApplication::interfaces].
+/// be passed to
+/// [`InterfacesStep::list_interfaces`][crate::InterfacesStep::list_interfaces].
 #[derive(Debug, TypedBuilder)]
 pub struct Interface {
     /// A unique identifier for this interface. This value will be passed back
     /// from Wireshark in the `--extcap-interface` argument in subsequent calls
-    /// to indicate which interface the user is working with. (When using
-    /// [`ExtcapApplication`][crate::ExtcapApplication], the corresponding
-    /// interface is resolved for you using this `value` as the key).
+    /// to indicate which interface the user is working with.
     pub value: Cow<'static, str>,
     /// A user-readable string describing this interface, which is shown in the
     /// Wireshark UI.
@@ -103,9 +101,11 @@ impl PrintSentence for Interface {
 
 /// Struct defining the DLT to be used for this extcap. Typically the DLT is
 /// defined together with the [`Interface`][crate::interface::Interface] and
-/// used in the [`ExtcapApplication`][crate::ExtcapApplication]. But you can
-/// also use this class standalone and print out the resulting config using the
-/// [`print_sentence`][crate::PrintSentence::print_sentence] method.
+/// passed into
+/// [`InterfacesStep::list_interfaces`][crate::InterfacesStep::list_interfaces].
+/// But you can also use this class standalone and print out the resulting
+/// config using the [`print_sentence`][crate::PrintSentence::print_sentence]
+/// method.
 #[derive(Clone, Debug, TypedBuilder)]
 pub struct Dlt {
     /// The data link type this packet should be analyzed as.
