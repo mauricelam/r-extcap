@@ -57,7 +57,7 @@ impl PrintSentence for Metadata {
 /// in the Wireshark homepage, similar to `Wi-Fi: en0`. Instances of this should
 /// be returned in
 /// [`ExtcapApplication::interfaces`][crate::ExtcapApplication::interfaces].
-#[derive(Debug)]
+#[derive(Debug, TypedBuilder)]
 pub struct Interface {
     /// A unique identifier for this interface. This value will be passed back
     /// from Wireshark in the `--extcap-interface` argument in subsequent calls

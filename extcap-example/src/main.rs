@@ -9,7 +9,8 @@ use r_extcap::{
     config::*,
     controls::synchronous::{ExtcapControlSender, ExtcapControlSenderTrait},
     controls::*,
-    interface::{Dlt, Interface, Metadata}, ExtcapApplication, ExtcapError,
+    interface::{Dlt, Interface, Metadata},
+    ExtcapStep,
 };
 use std::{
     fmt::Display,
@@ -198,94 +199,79 @@ lazy_static! {
                 .build(),
         ]).build();
 
-    static ref APPLICATION: ExampleExtcapApplication = ExampleExtcapApplication {
-        metadata: r_extcap::interface::Metadata {
-            help_url: "http://www.wireshark.org".into(),
-            display_description: "Rust Example extcap interface".into(),
-            ..r_extcap::cargo_metadata!()
-        },
-        interfaces: vec![
-            r_extcap::interface::Interface {
-                value: "rs-example1".into(),
-                display: "Rust Example interface 1 for extcap".into(),
-                dlt: Dlt {
-                    data_link_type: DataLink::USER0,
-                    name: "USER0".into(),
-                    display: "Demo Implementation for Extcap".into(),
-                },
-            },
-            r_extcap::interface::Interface {
-                value: "rs-example2".into(),
-                display: "Rust Example interface 2 for extcap".into(),
-                dlt: Dlt {
-                    data_link_type: DataLink::USER1,
-                    name: "USER1".into(),
-                    display: "Demo Implementation for Extcap".into(),
-                },
-            }
-        ],
-        control_message: StringControl {
-            control_number: 0,
-            display: String::from("Message"),
-            tooltip: Some(String::from("Package message content. Must start with a capital letter.")),
-            placeholder: Some(String::from("Enter package message content here ...")),
-            validation: Some(String::from(r"^[A-Z]+")),
-            default_value: None,
-        },
-        control_delay: SelectorControl {
-            control_number: 1,
-            display: String::from("Time delay"),
-            tooltip: Some(String::from("Time delay between packets")),
-            options: vec![
-                SelectorControlOption::builder().value("1").display("1s").build(),
-                SelectorControlOption::builder().value("2").display("2s").build(),
-                SelectorControlOption::builder().value("3").display("3s").build(),
-                SelectorControlOption::builder().value("4").display("4s").build(),
-                SelectorControlOption::builder().value("5").display("5s").default(true).build(),
-                SelectorControlOption::builder().value("60").display( "60s").build(),
-            ],
-        },
-        control_verify: BooleanControl {
-            control_number: 2,
-            display: String::from("Verify"),
-            tooltip: Some(String::from("Verify package control")),
-            default_value: false,
-        },
-        control_button: ButtonControl {
-            control_number: 3,
-            display: String::from("Turn on"),
-            tooltip: Some(String::from("Turn on or off")),
-        },
-        control_help: HelpButtonControl {
-            control_number: 4,
-            display: String::from("Help"),
-            tooltip: Some(String::from("Show help")),
-        },
-        control_restore: RestoreButtonControl {
-            control_number: 5,
-            display: String::from("Restore"),
-            tooltip: Some(String::from("Restore default values")),
-        },
-        control_logger: LoggerControl {
-            control_number: 6,
-            display: String::from("Log"),
-            tooltip: Some(String::from("Show capture log")),
+    static ref METADATA: Metadata = Metadata {
+        help_url: "http://www.wireshark.org".into(),
+        display_description: "Rust Example extcap interface".into(),
+        ..r_extcap::cargo_metadata!()
+    };
+
+    static ref INTERFACE1: Interface = Interface {
+        value: "rs-example1".into(),
+        display: "Rust Example interface 1 for extcap".into(),
+        dlt: Dlt {
+            data_link_type: DataLink::USER0,
+            name: "USER0".into(),
+            display: "Demo Implementation for Extcap".into(),
         },
     };
-}
 
-pub enum Exit {
-    Usage = 0,
-    ErrorArg = 1,
-    ErrorInterface = 2,
-    ErrorFifo = 3,
-    ErrorDelay = 4,
-}
+    static ref INTERFACE2: Interface = Interface {
+        value: "rs-example2".into(),
+        display: "Rust Example interface 2 for extcap".into(),
+        dlt: Dlt {
+            data_link_type: DataLink::USER1,
+            name: "USER1".into(),
+            display: "Demo Implementation for Extcap".into(),
+        },
+    };
 
-impl Exit {
-    fn exit(self) -> ! {
-        std::process::exit(self as i32)
-    }
+    static ref CONTROL_MESSAGE: StringControl = StringControl {
+        control_number: 0,
+        display: String::from("Message"),
+        tooltip: Some(String::from("Package message content. Must start with a capital letter.")),
+        placeholder: Some(String::from("Enter package message content here ...")),
+        validation: Some(String::from(r"^[A-Z]+")),
+        default_value: None,
+    };
+    static ref CONTROL_DELAY: SelectorControl = SelectorControl {
+        control_number: 1,
+        display: String::from("Time delay"),
+        tooltip: Some(String::from("Time delay between packets")),
+        options: vec![
+            SelectorControlOption::builder().value("1").display("1s").build(),
+            SelectorControlOption::builder().value("2").display("2s").build(),
+            SelectorControlOption::builder().value("3").display("3s").build(),
+            SelectorControlOption::builder().value("4").display("4s").build(),
+            SelectorControlOption::builder().value("5").display("5s").default(true).build(),
+            SelectorControlOption::builder().value("60").display( "60s").build(),
+        ],
+    };
+    static ref CONTROL_VERIFY: BooleanControl = BooleanControl {
+        control_number: 2,
+        display: String::from("Verify"),
+        tooltip: Some(String::from("Verify package control")),
+        default_value: false,
+    };
+    static ref CONTROL_BUTTON: ButtonControl = ButtonControl {
+        control_number: 3,
+        display: String::from("Turn on"),
+        tooltip: Some(String::from("Turn on or off")),
+    };
+    static ref CONTROL_HELP: HelpButtonControl = HelpButtonControl {
+        control_number: 4,
+        display: String::from("Help"),
+        tooltip: Some(String::from("Show help")),
+    };
+    static ref CONTROL_RESTORE: RestoreButtonControl = RestoreButtonControl {
+        control_number: 5,
+        display: String::from("Restore"),
+        tooltip: Some(String::from("Restore default values")),
+    };
+    static ref CONTROL_LOGGER: LoggerControl = LoggerControl {
+        control_number: 6,
+        display: String::from("Log"),
+        tooltip: Some(String::from("Show capture log")),
+    };
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -308,29 +294,18 @@ fn control_write_defaults(
     delay: u8,
     verify: bool,
 ) -> anyhow::Result<()> {
-    APPLICATION
-        .control_message
-        .set_value(message)
-        .send(extcap_control)?;
-    APPLICATION
-        .control_button
+    CONTROL_MESSAGE.set_value(message).send(extcap_control)?;
+    CONTROL_BUTTON
         .set_label(&delay.to_string())
         .send(extcap_control)?;
-    APPLICATION
-        .control_verify
-        .set_checked(verify)
-        .send(extcap_control)?;
+    CONTROL_VERIFY.set_checked(verify).send(extcap_control)?;
 
     for i in 1..16 {
-        APPLICATION
-            .control_delay
+        CONTROL_DELAY
             .add_value(&i.to_string(), Some(&format!("{i} sec")))
             .send(extcap_control)?;
     }
-    APPLICATION
-        .control_delay
-        .remove_value("60")
-        .send(extcap_control)?;
+    CONTROL_DELAY.remove_value("60").send(extcap_control)?;
     Ok(())
 }
 
@@ -375,41 +350,38 @@ pub struct AppArgs {
     multi: Vec<String>,
 }
 
-pub struct ExampleExtcapApplication {
-    metadata: Metadata,
-    interfaces: Vec<Interface>,
-    control_message: StringControl,
-    control_delay: SelectorControl,
-    control_verify: BooleanControl,
-    control_button: ButtonControl,
-    control_help: HelpButtonControl,
-    control_restore: RestoreButtonControl,
-    control_logger: LoggerControl,
-}
-
-impl ExtcapApplication for ExampleExtcapApplication {
-    fn metadata(&self) -> &Metadata {
-        &self.metadata
+fn main() -> anyhow::Result<()> {
+    env_logger::init();
+    debug!("argv: {:?}", std::env::args());
+    let args = AppArgs::parse();
+    debug!("Args: {args:?}");
+    if !args.extcap.capture {
+        if let Some(filter) = args.extcap.extcap_capture_filter {
+            validate_capture_filter(&filter);
+            std::process::exit(0);
+        }
     }
-
-    fn interfaces(&self) -> Vec<&Interface> {
-        self.interfaces.iter().collect()
-    }
-
-    fn toolbar_controls(&self) -> Vec<&dyn ToolbarControl> {
-        vec![
-            &self.control_message,
-            &self.control_delay,
-            &self.control_verify,
-            &self.control_button,
-            &self.control_help,
-            &self.control_restore,
-            &self.control_logger,
-        ]
-    }
-
-    fn configs(&self, _interface: &Interface) -> Vec<&dyn ConfigTrait> {
-        vec![
+    debug!("Running app");
+    match args.extcap.run()? {
+        ExtcapStep::Interfaces(interfaces_step) => {
+            interfaces_step.list_interfaces(
+                &METADATA,
+                &[&*INTERFACE1, &*INTERFACE2],
+                &[
+                    &*CONTROL_MESSAGE,
+                    &*CONTROL_DELAY,
+                    &*CONTROL_VERIFY,
+                    &*CONTROL_BUTTON,
+                    &*CONTROL_HELP,
+                    &*CONTROL_RESTORE,
+                    &*CONTROL_LOGGER,
+                ],
+            );
+        }
+        ExtcapStep::Dlts(dlts_step) => {
+            dlts_step.print_from_interfaces(&[&*INTERFACE1, &*INTERFACE2])?;
+        }
+        ExtcapStep::Config(config_step) => config_step.list_configs(&[
             &*CONFIG_DELAY,
             &*CONFIG_MESSAGE,
             &*CONFIG_VERIFY,
@@ -423,29 +395,18 @@ impl ExtcapApplication for ExampleExtcapApplication {
             &*CONFIG_LOGFILE,
             &*CONFIG_RADIO,
             &*CONFIG_MULTI,
-        ]
-    }
-}
-
-fn main() -> anyhow::Result<()> {
-    env_logger::init();
-    debug!("argv: {:?}", std::env::args());
-    let args = AppArgs::parse();
-    debug!("Args: {args:?}");
-    if !args.extcap.extcap_interfaces && args.extcap.extcap_interface.is_none() {
-        eprintln!("An interface must be provided or the selection must be displayed");
-        Exit::ErrorArg.exit();
-    }
-    if !args.extcap.capture {
-        if let Some(filter) = args.extcap.extcap_capture_filter {
-            validate_capture_filter(&filter);
-            std::process::exit(0);
+        ]),
+        ExtcapStep::ReloadConfig(reload_config_step) => {
+            if reload_config_step.config == CONFIG_REMOTE.call {
+                reload_config_step.reload_options(&CONFIG_REMOTE)?;
+            } else {
+                return Err(anyhow::anyhow!(
+                    "Unexpected config to reload: {}",
+                    reload_config_step.config
+                ));
+            }
         }
-    }
-    debug!("Running app");
-    match args.extcap.run(&*APPLICATION) {
-        Ok(None) => return Ok(()),
-        Ok(Some(capture_context)) => {
+        ExtcapStep::Capture(capture_step) => {
             anyhow::ensure!(args.delay <= 5, "Value for delay {} too high", args.delay);
             let mut app_state = CaptureState {
                 initialized: false,
@@ -464,15 +425,14 @@ fn main() -> anyhow::Result<()> {
             at nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culp \
             a qui officia deserunt mollit anim id est laborum.";
             let mut controls = (
-                capture_context.spawn_channel_control_reader(),
-                capture_context.new_control_sender(),
+                capture_step.spawn_channel_control_reader(),
+                capture_step.new_control_sender(),
             );
             if let (Some(control_reader), Some(control_sender)) = &mut controls {
                 let packet = control_reader.read_packet()?;
                 assert_eq!(packet.command, ControlCommand::Initialized);
 
-                APPLICATION
-                    .control_logger
+                CONTROL_LOGGER
                     .clear_and_add_log(format!("Log started at {:?}", SystemTime::now()).into())
                     .send(control_sender)?;
                 control_write_defaults(
@@ -488,7 +448,7 @@ fn main() -> anyhow::Result<()> {
                 endianness: pcap_file::Endianness::Big,
                 ..Default::default()
             };
-            let mut pcap_writer = PcapWriter::with_header(capture_context.fifo, pcap_header).unwrap();
+            let mut pcap_writer = PcapWriter::with_header(capture_step.fifo, pcap_header).unwrap();
             let mut data_packet = 0;
             let data_total = DATA.len() / 20 + 1;
 
@@ -499,8 +459,7 @@ fn main() -> anyhow::Result<()> {
                             .unwrap();
                     }
 
-                    APPLICATION
-                        .control_logger
+                    CONTROL_LOGGER
                         .add_log(format!("Received packet #{counter}").into())
                         .send(control_sender)?;
                     counter += 1;
@@ -511,10 +470,7 @@ fn main() -> anyhow::Result<()> {
                     );
 
                     if app_state.button_disabled {
-                        APPLICATION
-                            .control_button
-                            .set_enabled(true)
-                            .send(control_sender)?;
+                        CONTROL_BUTTON.set_enabled(true).send(control_sender)?;
                         control_sender.info_message("Turn action finished.")?;
                         app_state.button_disabled = false;
                     }
@@ -544,10 +500,6 @@ fn main() -> anyhow::Result<()> {
                 std::thread::sleep(Duration::from_secs(app_state.delay.into()));
             }
         }
-        Err(ExtcapError::NotExtcapInput) => { /* continue */ }
-        err => {
-            err?;
-        }
     }
     debug!("App run finished");
 
@@ -573,41 +525,32 @@ fn handle_control_packet(
     match control_packet.command {
         ControlCommand::Initialized => app_state.initialized = true,
         ControlCommand::Set => {
-            if control_packet.control_number == APPLICATION.control_message.control_number {
+            if control_packet.control_number == CONTROL_MESSAGE.control_number {
                 let msg = String::from_utf8(control_packet.payload.to_vec())?;
                 log = Some(format!("Message = {}", msg));
                 app_state.message = msg;
-            } else if control_packet.control_number == APPLICATION.control_delay.control_number {
+            } else if control_packet.control_number == CONTROL_DELAY.control_number {
                 app_state.delay = std::str::from_utf8(control_packet.payload.as_ref())?
                     .parse::<u8>()
                     .unwrap();
                 log = Some(format!("Time delay = {}", app_state.delay));
-            } else if control_packet.control_number == APPLICATION.control_verify.control_number {
+            } else if control_packet.control_number == CONTROL_VERIFY.control_number {
                 // Only read this after initialized
                 if app_state.initialized {
                     app_state.verify = control_packet.payload[0] != 0_u8;
                     log = Some(format!("Verify = {:?}", app_state.verify));
                     control_sender.status_message("Verify changed")?;
                 }
-            } else if control_packet.control_number == APPLICATION.control_button.control_number {
-                APPLICATION
-                    .control_button
-                    .set_enabled(false)
-                    .send(control_sender)?;
+            } else if control_packet.control_number == CONTROL_BUTTON.control_number {
+                CONTROL_BUTTON.set_enabled(false).send(control_sender)?;
                 debug!("Got button control event. button={}", app_state.button);
                 app_state.button_disabled = true;
                 if app_state.button {
-                    APPLICATION
-                        .control_button
-                        .set_label("Turn on")
-                        .send(control_sender)?;
+                    CONTROL_BUTTON.set_label("Turn on").send(control_sender)?;
                     app_state.button = false;
                     log = Some(String::from("Button turned off"));
                 } else {
-                    APPLICATION
-                        .control_button
-                        .set_label("Turn off")
-                        .send(control_sender)?;
+                    CONTROL_BUTTON.set_label("Turn off").send(control_sender)?;
                     app_state.button = true;
                     log = Some(String::from("Button turned on"));
                 }
@@ -621,10 +564,7 @@ fn handle_control_packet(
         _ => panic!("Unexpected control command {:?}", control_packet.command),
     }
     if let Some(log) = log {
-        APPLICATION
-            .control_logger
-            .add_log(log.into())
-            .send(control_sender)?;
+        CONTROL_LOGGER.add_log(log.into()).send(control_sender)?;
     }
     debug!("Read control packet Loop end");
     Ok(())

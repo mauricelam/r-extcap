@@ -605,7 +605,6 @@ impl<'a> ControlPacket<'a> {
     }
 }
 
-
 /// The control command for the control packet. Note that a `ControlCommand` is
 /// not valid for all control types, for example, the `Remove` command is
 /// applicable only to [`SelectorControls`][SelectorControl], and `Initialized`

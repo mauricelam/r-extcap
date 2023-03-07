@@ -20,7 +20,10 @@ use std::{
     fs::File,
     io::{Read, Write},
     path::{Path, PathBuf},
-    sync::{mpsc::{self, SendError}, Mutex},
+    sync::{
+        mpsc::{self, SendError},
+        Mutex,
+    },
     thread::JoinHandle,
 };
 use thiserror::Error;
@@ -56,7 +59,7 @@ pub enum ControlChannelError {
     CannotSend,
 }
 
-impl <T> From<SendError<T>> for ControlChannelError {
+impl<T> From<SendError<T>> for ControlChannelError {
     fn from(_: SendError<T>) -> Self {
         ControlChannelError::CannotSend
     }
@@ -189,7 +192,6 @@ const UNUSED_CONTROL_NUMBER: u8 = 255;
 /// and `status_message`. For other functions controlling various toolbar
 /// controls, see the methods in the [`control`][crate::controls] module instead.
 pub trait ExtcapControlSenderTrait: Sized {
-
     /// Sends the given `packet` by writing it to the given output file (or
     /// fifo).
     fn send(self, packet: ControlPacket<'_>) -> std::io::Result<()>;

@@ -38,12 +38,12 @@ fn config() {
         .success()
         .stdout(predicate::str::diff(indoc! {"
             arg {number=0}{call=--delay}{display=Time delay}{tooltip=Time delay between packages}{range=1,15}{default=5}{type=integer}
-            arg {number=1}{call=--message}{display=Message}{tooltip=Package message content}{placeholder=Please enter a message here ...}{required=true}{save=true}{type=string}
+            arg {number=1}{call=--message}{display=Message}{tooltip=Package message content}{placeholder=Please enter a message here ...}{required=true}{type=string}
             arg {number=2}{call=--verify}{display=Verify}{tooltip=Verify package content}{default=true}{type=boolflag}
             arg {number=3}{call=--remote}{display=Remote Channel}{tooltip=Remote Channel Selector}{type=selector}{reload=true}{placeholder=Load interfaces...}
             value {arg=3}{value=if1}{display=Remote1}{default=true}
             value {arg=3}{value=if2}{display=Remote2}{default=false}
-            arg {number=4}{call=--fake_ip}{display=Fake IP Address}{tooltip=Use this ip address as sender}{validation=\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b}{save=true}{type=string}
+            arg {number=4}{call=--fake_ip}{display=Fake IP Address}{tooltip=Use this ip address as sender}{validation=\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b}{type=string}
             arg {number=5}{call=--ltest}{display=Long Test}{tooltip=Long Test Value}{default=123123123123123123}{type=long}{group=Numeric Values}
             arg {number=6}{call=--d1test}{display=Double 1 Test}{tooltip=Double Test Value}{default=123.456}{type=double}{group=Numeric Values}
             arg {number=7}{call=--d2test}{display=Double 2 Test}{tooltip=Double Test Value}{default=123456}{type=double}{group=Numeric Values}
@@ -74,7 +74,7 @@ fn config_reload_options() {
         .arg("--extcap-config")
         .args(["--extcap-reload-option", "remote"])
         .arg("--verify");
-    cmd.assert().success().stdout(predicate::str::diff(indoc!{"
+    cmd.assert().success().stdout(predicate::str::diff(indoc! {"
         value {arg=3}{value=if1}{display=Remote Interface 1}{default=false}
         value {arg=3}{value=if2}{display=Remote Interface 2}{default=true}
         value {arg=3}{value=if3}{display=Remote Interface 3}{default=false}
@@ -98,8 +98,13 @@ fn capture() {
     let capture_fifo = tempdir.path().join("capture-fifo");
     nix::unistd::mkfifo(&capture_fifo, stat::Mode::S_IRWXU).unwrap();
     let mut cmd = Command::cargo_bin("extcap-example").unwrap();
-    cmd.args(["--extcap-interface", "rs-example1", "--capture", "--fifo", capture_fifo.to_string_lossy().as_ref()]);
-    cmd.args(["--delay", "5", "--message", "hi", "--verify", "--remote", "if2"]);
-    cmd.timeout(Duration::from_secs(5));
+    cmd.args(["--extcap-interface", "rs-example1"]);
+    cmd.args(["--capture"]);
+    cmd.args(["--fifo", capture_fifo.to_string_lossy().as_ref()]);
+    cmd.args(["--delay", "5"]);
+    cmd.args(["--message", "hi"]);
+    cmd.args(["--verify"]);
+    cmd.args(["--remote", "if2"]);
+    cmd.timeout(Duration::from_secs(2));
     cmd.assert().interrupted();
 }

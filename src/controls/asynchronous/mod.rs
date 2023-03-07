@@ -22,7 +22,10 @@ use thiserror::Error;
 use tokio::{
     fs::File,
     io::{AsyncReadExt, AsyncWriteExt},
-    sync::{mpsc::{self, error::SendError}, Mutex},
+    sync::{
+        mpsc::{self, error::SendError},
+        Mutex,
+    },
     task::JoinHandle,
 };
 
@@ -57,7 +60,7 @@ pub enum ControlChannelError {
     CannotSend,
 }
 
-impl <T> From<SendError<T>> for ControlChannelError {
+impl<T> From<SendError<T>> for ControlChannelError {
     fn from(_: SendError<T>) -> Self {
         ControlChannelError::CannotSend
     }
@@ -106,8 +109,7 @@ impl ChannelExtcapControlReader {
         let join_handle = tokio::task::spawn(async move {
             let mut reader = ExtcapControlReader::new(&in_path).await;
             loop {
-                tx.send(reader.read_control_packet().await?)
-                    .await?;
+                tx.send(reader.read_control_packet().await?).await?;
             }
         });
         Self {

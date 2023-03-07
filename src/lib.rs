@@ -73,16 +73,7 @@
 //! ```no_run
 //! # use lazy_static::lazy_static;
 //! use clap::Parser;
-//! use r_extcap::{ExtcapApplication, ExtcapArgs};
-//! use r_extcap::{interface::*, controls::*, config::*};
-//!
-//! struct ExampleExtcapApplication {}
-//! impl ExtcapApplication for ExampleExtcapApplication {
-//!       fn metadata(&self) -> &Metadata { todo!() }
-//!       fn interfaces(&self) -> Vec<&Interface> { todo!() }
-//!       fn toolbar_controls(&self) -> Vec<&dyn ToolbarControl> { todo!() }
-//!       fn configs(&self, interface: &Interface) -> Vec<&dyn ConfigTrait> { todo!() }
-//! }
+//! use r_extcap::{cargo_metadata, ExtcapArgs, ExtcapStep, interface::*, controls::*, config::*};
 //!
 //! #[derive(Debug, Parser)]
 //! struct AppArgs {
@@ -91,14 +82,46 @@
 //! }
 //!
 //! lazy_static! {
-//!     static ref APPLICATION: ExampleExtcapApplication = ExampleExtcapApplication {
-//!         // ...
-//!     };
+//!     // static ref CONFIG_FOO: SelectorConfig = ...;
+//!     // static ref CONFIG_BAR: StringConfig = ...;
+//!
+//!     // static ref CONTROL_A: BooleanControl = ...;
+//!
+//!     // static ref INTERFACE_1: Interface = ...;
 //! }
 //!
 //! fn main() -> anyhow::Result<()> {
-//!     if let Some(capture_context) = AppArgs::parse().extcap.run(&*APPLICATION)? {
-//!         // Run capture
+//!     match AppArgs::parse().extcap.run()? {
+//!         ExtcapStep::Interfaces(interfaces_step) => {
+//!             interfaces_step.list_interfaces(
+//!                 &cargo_metadata!(),
+//!                 &[
+//!                     // &*INTERFACE_1,
+//!                 ],
+//!                 &[
+//!                     // &*CONTROL_A,
+//!                     // &*CONTROL_B,
+//!                 ],
+//!             );
+//!         }
+//!         ExtcapStep::Dlts(dlts_step) => {
+//!             dlts_step.print_from_interfaces(&[
+//!                 // &*INTERFACE_1,
+//!             ])?;
+//!         }
+//!         ExtcapStep::Config(config_step) => config_step.list_configs(&[
+//!             // &*CONFIG_FOO,
+//!             // &*CONFIG_BAR,
+//!         ]),
+//!         ExtcapStep::ReloadConfig(reload_config_step) => {
+//!             reload_config_step.reload_from_configs(&[
+//!                 // &*CONFIG_FOO,
+//!                 // &*CONFIG_BAR,
+//!             ])?;
+//!         }
+//!         ExtcapStep::Capture(capture_step) => {
+//!             // Run capture
+//!         }
 //!     }
 //!     Ok(())
 //! }
@@ -109,10 +132,10 @@
 //! * <https://www.wireshark.org/docs/man-pages/extcap.html>
 //! * <https://gitlab.com/wireshark/wireshark/-/blob/master/doc/extcap_example.py>
 
-#![deny(missing_docs)]
+#![warn(missing_docs)]
 
 use clap::Args;
-use config::{ConfigTrait, Reload, SelectorConfig};
+use config::{ConfigTrait, SelectorConfig};
 use controls::ToolbarControl;
 use interface::{Interface, Metadata};
 use std::{
@@ -351,24 +374,21 @@ impl ExtcapArgs {
     /// from their `main` functions.
     ///
     /// For detailed usage, see the [crate documentation][crate]
-    pub fn run<App: ExtcapApplication>(
-        &self,
-        app: &App,
-    ) -> Result<Option<CaptureContext>, ExtcapError> {
+    pub fn run(&self) -> Result<ExtcapStep, ExtcapError> {
         if self.extcap_interfaces {
-            app.list_interfaces();
-            Ok(None)
+            Ok(ExtcapStep::Interfaces(InterfacesStep))
         } else if let Some(interface) = &self.extcap_interface {
             if self.extcap_config {
                 if let Some(reload_config) = &self.extcap_reload_option {
-                    app.reload_config(interface, reload_config)?;
+                    Ok(ExtcapStep::ReloadConfig(ReloadConfigStep {
+                        interface,
+                        config: reload_config,
+                    }))
                 } else {
-                    app.list_configs(interface)?;
+                    Ok(ExtcapStep::Config(ConfigStep { interface }))
                 }
-                Ok(None)
             } else if self.extcap_dlts {
-                app.print_dlt(interface)?;
-                Ok(None)
+                Ok(ExtcapStep::Dlts(DltsStep { interface }))
             } else if self.capture {
                 let fifo_path = self.fifo.as_ref().ok_or(CaptureError::MissingFifo)?;
                 let fifo = File::create(fifo_path).map_err(CaptureError::Io)?;
@@ -376,7 +396,7 @@ impl ExtcapArgs {
                     .extcap_interface
                     .as_ref()
                     .ok_or(CaptureError::MissingInterface)?;
-                Ok(Some(CaptureContext {
+                Ok(ExtcapStep::Capture(CaptureStep {
                     interface,
                     // Note: It is important to open this file, so the file gets
                     // closed even if the implementation doesn't use it.
@@ -403,9 +423,7 @@ pub enum ExtcapError {
     /// command line. When this happens, you can print out the
     /// [`installation_instructions`], to help the user install this in the
     /// right location.
-    #[error(
-        "Missing input extcap command. Maybe you need to install this with Wireshark instead?"
-    )]
+    #[error("Missing input extcap command. {}", installation_instructions())]
     NotExtcapInput,
 
     /// Error when listing config. See [`ListConfigError`].
@@ -425,9 +443,286 @@ pub enum ExtcapError {
     CaptureError(#[from] CaptureError),
 }
 
+/// Get the installation instructions. This is useful to show if the program is
+/// used in unexpected ways (e.g. not as an extcap program), so users can easily
+/// install with a copy-pastable command.
+///
+/// ```
+/// # use indoc::formatdoc;
+/// # let exe = std::env::current_exe().unwrap();
+/// # let executable_path = exe.to_string_lossy();
+/// # let exe_name = exe.file_name().unwrap().to_string_lossy();
+/// assert_eq!(
+///     r_extcap::installation_instructions(),
+///     formatdoc!{"
+///         This is an extcap plugin meant to be used with Wireshark or tshark.
+///         To install this plugin for use with Wireshark, symlink or copy this executable \
+///         to your Wireshark extcap directory
+///           mkdir -p ~/.config/wireshark/extcap/ && ln -s \"{executable_path}\" \"~/.config/wireshark/extcap/{exe_name}\"\
+///     "}
+/// )
+/// ```
+pub fn installation_instructions() -> String {
+    let install_cmd = std::env::current_exe()
+        .ok()
+        .and_then(|exe| {
+            let path = exe.to_string_lossy();
+            let name = exe.file_name()?.to_string_lossy();
+            Some(format!("\n  mkdir -p ~/.config/wireshark/extcap/ && ln -s \"{path}\" \"~/.config/wireshark/extcap/{name}\""))
+        })
+        .unwrap_or_default();
+    format!(
+        concat!(
+            "This is an extcap plugin meant to be used with Wireshark or tshark.\n",
+            "To install this plugin for use with Wireshark, symlink or copy this executable ",
+            "to your Wireshark extcap directory{}",
+        ),
+        install_cmd
+    )
+}
+
+/// Error printing DLTs to Wireshark.
+#[derive(Debug, Error)]
+pub enum PrintDltError {
+    /// The interface string value given from Wireshark is not found. Wireshark
+    /// invokes the extcap program multiple times, first to get the list of
+    /// interfaces, then multiple times to get the DLTs. Therefore,
+    /// implementations should make sure that the interfaces returned from
+    /// [`ExtcapApplication::interfaces`] are deterministic and doesn't change
+    /// across invocations of the program.
+    #[error("Cannot list DLT for unknown interface \"{0}\".")]
+    UnknownInterface(String),
+}
+
+/// Error when reloading configs. Config reload happens when a config, like
+/// [`crate::config::SelectorConfig`] specifics the `reload` field and the user
+/// clicks on the created reload button.
+#[derive(Debug, Error)]
+pub enum ReloadConfigError {
+    /// The interface string value given from Wireshark is not found. Wireshark
+    /// makes separate invocations to get the initial list of interfaces, and
+    /// when the user subsequently hits reload on a config. Therefore,
+    /// implementations should make sure that the interfaces returned from
+    /// [`ExtcapApplication::interfaces`] are deterministic and doesn't change
+    /// across invocations of the program.
+    #[error("Cannot reload config options for unknown interface \"{0}\".")]
+    UnknownInterface(String),
+
+    /// The config `call` value given from Wireshark is not found in the configs
+    /// defined for this [`ExtcapApplication`]. Wireshark makes separate
+    /// invocations to get the initial list of interfaces, and when the user
+    /// subsequently hits reload on a config. Therefore, implementations should
+    /// make sure that the configs used in [`ConfigStep`] and
+    /// [`ReloadConfigStep`] are consistent.
+    #[error("Cannot reload options for unknown config \"{0}\".")]
+    UnknownConfig(String),
+
+    /// The config given by Wireshark is found, but it is not a
+    /// [`SelectorConfig`]. This configuration is not expected to be invoked by
+    /// Wireshark, as the [`SelectorConfig::reload`] field only exists for the
+    /// appropriate types.
+    #[error("Cannot reload config options for \"{0}\", which is not of type \"selector\".")]
+    UnsupportedConfig(String),
+}
+
+/// Error listing configs.
+#[derive(Debug, Error)]
+pub enum ListConfigError {
+    /// The interface string value given from Wireshark is not found. Wireshark
+    /// makes separate invocations to get the initial list of interfaces, and
+    /// when the user subsequently opens the config dialog. Therefore,
+    /// implementations should make sure that the interfaces used in different
+    /// [`ExtcapSteps`][ExtcapStep] are deterministic and doesn't change across
+    /// invocations of the program.
+    #[error("Cannot reload config options for unknown interface \"{0}\".")]
+    UnknownInterface(String),
+}
+
+/// The step of extcap to execute, which is returned from [`ExtcapArgs::run`].
+/// Each step has its own type which contains the relevant methods for each
+/// step. See the docs for each individual step to for details on what
+/// operations should be performed.
+pub enum ExtcapStep<'a> {
+    /// List the interfaces and toolbar controls supported by this extcap
+    /// implementation in stdout for Wireshark's consumption. Corresponds to the
+    /// `--extcap-interfaces` argument in extcap.
+    ///
+    /// See the documentation on [`InterfacesStep`] for details.
+    Interfaces(InterfacesStep),
+    /// Prints the DLT to stdout for consumption by Wireshark. Corresponds to
+    /// the `--extcap-dlts` argument in extcap.
+    ///
+    /// See the documentation on [`DltsStep`] for details.
+    Dlts(DltsStep<'a>),
+    /// List the configs available for the given interface in stdout for
+    /// Wireshark's consumption. Corresponds to the `--extcap-config` argument
+    /// in extcap.
+    ///
+    /// See the documentation on [`ConfigStep`] for details.
+    Config(ConfigStep<'a>),
+    /// Reloads the available options for a given config and prints them out for
+    /// Wireshark's consumption. The default implementation looks up config returned from `configs` and calls its reload function. Corresponds to the `--extcap-reload-option`
+    /// argument in extcap.
+    ///
+    /// See the documentation on [`ReloadConfigStep`] for details.
+    ReloadConfig(ReloadConfigStep<'a>),
+    /// Corresponds to the `--capture` step in Wireshark. In this step, the
+    /// implementation should start capturing from the external interface and
+    /// write the output to the fifo given in [`CaptureStep::fifo`].
+    ///
+    /// See the documentation on [`CaptureStep`] for details.
+    Capture(CaptureStep<'a>),
+}
+
+/// List the interfaces and toolbar controls supported by this extcap
+/// implementation in stdout for Wireshark's consumption. Corresponds to the
+/// `--extcap-interfaces` argument in extcap. Implementations should call
+/// [`list_interfaces`][Self::list_interfaces] during this step.
+pub struct InterfacesStep;
+
+impl InterfacesStep {
+    /// List the interfaces and toolbar controls supported by this extcap
+    /// implementation in stdout for Wireshark's consumption. Wireshark calls
+    /// this when the application starts up to populate the list of available
+    /// interfaces.
+    ///
+    /// * metadata: metadata like version info and help URL for this program.
+    ///   This is used by Wireshark to display in the UI.
+    ///
+    ///   The [`cargo_metadata`] macro can be used to create this from data in
+    ///   `Cargo.toml`.
+    /// * interfaces: List of interfaces to make available for external capture.
+    ///   Since that interface list is cached and the interface names can be
+    ///   used later when the user tries to start a capture session, the
+    ///   interface list should stay as consistent as possible. If the list of
+    ///   interfaces can change, the extcap program must be prepared to handle
+    ///   stale values in [`ConfigStep::interface`] and
+    ///   [`CaptureStep::interface`].
+    /// * controls: List the toolbar controls for this interface. In Wireshark,
+    ///   this is presented to the user in View > Interface Toolbars. See the
+    ///   documentation in [`controls`] for details.
+    pub fn list_interfaces(
+        &self,
+        metadata: &Metadata,
+        interfaces: &[&Interface],
+        controls: &[&dyn ToolbarControl],
+    ) {
+        metadata.print_sentence();
+        for interface in interfaces {
+            interface.print_sentence();
+        }
+        for control in controls {
+            control.print_sentence();
+        }
+    }
+}
+
+/// In the DLTs step, Wireshark asks the extcap program for the DLT for each
+/// interface. DLT stands for data link type, and is used to determine how
+/// Wireshark analyzes (dissects) the given packets.
+///
+/// Despite this step being named with plurals (DLTs) by extcap, only one DLT is
+/// expected for each interface. Corresponds to the `--extcap-dlts` argument in
+/// extcap.
+pub struct DltsStep<'a> {
+    /// The interface to print the DLT for.
+    pub interface: &'a str,
+}
+
+impl<'a> DltsStep<'a> {
+    /// Print the DLT for the given interface. If you have the list of
+    /// interfaces from [`InterfacesStep`], consider using
+    /// [`print_from_interfaces`][Self::print_from_interfaces] instead.
+    pub fn print_dlt(&self, interface: &Interface) {
+        interface.dlt.print_sentence();
+    }
+
+    /// Finds the interface within `interfaces` that matches the given request
+    /// and prints out its DLT. Typically `interfaces` will be the same list
+    /// given to [`InterfacesStep::list_interfaces`].
+    pub fn print_from_interfaces(&self, interfaces: &[&Interface]) -> Result<(), PrintDltError> {
+        interfaces
+            .iter()
+            .find(|i| i.value == self.interface)
+            .ok_or_else(|| PrintDltError::UnknownInterface(self.interface.to_owned()))?
+            .dlt
+            .print_sentence();
+        Ok(())
+    }
+}
+
+/// List the configurable UI elements for this interface. This is presented to
+/// the user when they click on the gear icon next to the capture interface
+/// name, or if they try to start a capture that is lacking a required config
+/// value.
+pub struct ConfigStep<'a> {
+    /// The interface that the configurations should be associated with.
+    pub interface: &'a str,
+}
+
+impl<'a> ConfigStep<'a> {
+    /// List the `configs` given, printing them out to stdout for consumption by
+    /// Wireshark. This list can vary by [`interface`].
+    pub fn list_configs(&self, configs: &[&dyn ConfigTrait]) {
+        for config in configs {
+            config.print_sentence();
+        }
+    }
+}
+
+/// Reload operation for a particular configuration. This is invoked when the
+/// user clicks on the reload button created by a [`SelectorConfig`] with the
+/// [`reload`][SelectorConfig::reload] field set. Corresponds to the
+/// `--extcap-reload-option` argument in extcap.
+pub struct ReloadConfigStep<'a> {
+    /// The [`Interface::value`] from the interface the reloaded config is
+    /// associated with.
+    pub interface: &'a str,
+    /// The [`ConfigTrait::call`] of the config being reloaded.
+    pub config: &'a str,
+}
+
+impl<'a> ReloadConfigStep<'a> {
+    /// Calls the [`reload`][SelectorConfig::reload] function in the given
+    /// `config`. Returns the error [`ReloadConfigError::UnsupportedConfig`] if
+    /// the given config does not have `reload` set.
+    ///
+    /// If you have the list of configs for the given interface, consider using
+    /// [`reload_from_configs`][Self::reload_from_configs] instead.
+    pub fn reload_options(&self, config: &SelectorConfig) -> Result<(), ReloadConfigError> {
+        let reload = config
+            .reload
+            .as_ref()
+            .ok_or_else(|| ReloadConfigError::UnsupportedConfig(config.call.clone()))?;
+        for value in (reload.reload_fn)() {
+            value.print_sentence(config.config_number);
+        }
+        Ok(())
+    }
+
+    /// Process config reload request using the list of `configs`. This list is
+    /// typically the same as the one given to [`ConfigStep::list_configs`].
+    pub fn reload_from_configs(
+        &self,
+        configs: &[&dyn ConfigTrait],
+    ) -> Result<(), ReloadConfigError> {
+        let config = configs
+            .iter()
+            .find(|c| c.call() == self.config)
+            .ok_or_else(|| ReloadConfigError::UnknownConfig(self.config.to_owned()))?;
+        let selector = config
+            .as_any()
+            .downcast_ref::<SelectorConfig>()
+            .ok_or_else(|| ReloadConfigError::UnsupportedConfig(self.config.to_owned()))?;
+        self.reload_options(selector)
+    }
+}
+
 /// When this value is returned in [`ExtcapArgs::run`], the implementation
-/// should use these returned values to start capturing packets.
-pub struct CaptureContext<'a> {
+/// should use these returned values to start capturing packets from the
+/// external interface and write them to the [`fifo`][Self::fifo] in PCAP
+/// format.
+pub struct CaptureStep<'a> {
     /// The interface to run this capture on. This is the string previously
     /// defined in [`Interface::value`].
     pub interface: &'a str,
@@ -447,7 +742,7 @@ pub struct CaptureContext<'a> {
     pub extcap_control_out: &'a Option<std::path::PathBuf>,
 }
 
-impl<'a> CaptureContext<'a> {
+impl<'a> CaptureStep<'a> {
     /// Create a new control sender for this capture, if `--extcap-control-out`
     /// is specified in the command line. The control sender is used to send
     /// control messages to Wireshark to modify
@@ -547,203 +842,6 @@ impl<'a> CaptureContext<'a> {
     #[cfg(feature = "async")]
     pub async fn fifo_async(&self) -> tokio::io::Result<tokio::fs::File> {
         tokio::fs::File::create(self.fifo_path).await
-    }
-}
-
-/// Get the installation instructions. This is useful to show if the program is
-/// used in unexpected ways (e.g. not as an extcap program), so users can easily
-/// install with a copy-pastable command.
-///
-/// ```
-/// # use indoc::formatdoc;
-/// # let exe = std::env::current_exe().unwrap();
-/// # let executable_path = exe.to_string_lossy();
-/// # let exe_name = exe.file_name().unwrap().to_string_lossy();
-/// assert_eq!(
-///     r_extcap::installation_instructions(),
-///     formatdoc!{"
-///         This is an extcap plugin meant to be used with Wireshark or tshark.
-///         To install this plugin for use with Wireshark, symlink or copy this executable \
-///         to your Wireshark extcap directory
-///           mkdir -p ~/.config/wireshark/extcap/ && ln -s \"{executable_path}\" \"~/.config/wireshark/extcap/{exe_name}\"\
-///     "}
-/// )
-/// ```
-pub fn installation_instructions() -> String {
-    let install_cmd = std::env::current_exe()
-        .ok()
-        .and_then(|exe| {
-            let path = exe.to_string_lossy();
-            let name = exe.file_name()?.to_string_lossy();
-            Some(format!("\n  mkdir -p ~/.config/wireshark/extcap/ && ln -s \"{path}\" \"~/.config/wireshark/extcap/{name}\""))
-        })
-        .unwrap_or_default();
-    format!(
-        concat!(
-            "This is an extcap plugin meant to be used with Wireshark or tshark.\n",
-            "To install this plugin for use with Wireshark, symlink or copy this executable ",
-            "to your Wireshark extcap directory{}",
-        ),
-        install_cmd
-    )
-}
-
-/// Error printing DLTs to Wireshark.
-#[derive(Debug, Error)]
-pub enum PrintDltError {
-    /// The interface string value given from Wireshark is not found. Wireshark
-    /// invokes the extcap program multiple times, first to get the list of
-    /// interfaces, then multiple times to get the DLTs. Therefore,
-    /// implementations should make sure that the interfaces returned from
-    /// [`ExtcapApplication::interfaces`] are deterministic and doesn't change
-    /// across invocations of the program.
-    #[error("Cannot list DLT for unknown interface \"{0}\".")]
-    UnknownInterface(String),
-}
-
-/// Error when reloading configs. Config reload happens when a config, like
-/// [`crate::config::SelectorConfig`] specifics the `reload` field and the user
-/// clicks on the created reload button.
-#[derive(Debug, Error)]
-pub enum ReloadConfigError {
-    /// The interface string value given from Wireshark is not found. Wireshark
-    /// makes separate invocations to get the initial list of interfaces, and
-    /// when the user subsequently hits reload on a config. Therefore,
-    /// implementations should make sure that the interfaces returned from
-    /// [`ExtcapApplication::interfaces`] are deterministic and doesn't change
-    /// across invocations of the program.
-    #[error("Cannot reload config options for unknown interface \"{0}\".")]
-    UnknownInterface(String),
-
-    /// The config `call` value given from Wireshark is not found in the configs
-    /// defined for this [`ExtcapApplication`]. Wireshark makes separate
-    /// invocations to get the initial list of interfaces, and when the user
-    /// subsequently hits reload on a config. Therefore, implementations should
-    /// make sure that the configs returned from
-    /// [`ExtcapApplication::configs`] are deterministic and doesn't change
-    /// across invocations of the program.
-    #[error("Cannot reload options for unknown config \"{0}\".")]
-    UnknownConfig(String),
-
-    /// The config given by Wireshark is found, but it is not a
-    /// [`SelectorConfig`]. This configuration is not expected to be invoked by
-    /// Wireshark, as the [`SelectorConfig::reload`] field only exists for the
-    /// appropriate types.
-    #[error("Cannot reload config options for \"{0}\", which is not of type \"selector\".")]
-    UnsupportedConfig(String),
-}
-
-/// Error listing configs.
-#[derive(Debug, Error)]
-pub enum ListConfigError {
-    /// The interface string value given from Wireshark is not found. Wireshark
-    /// makes separate invocations to get the initial list of interfaces, and
-    /// when the user subsequently opens the config dialog. Therefore,
-    /// implementations should make sure that the interfaces returned from
-    /// [`ExtcapApplication::interfaces`] are deterministic and doesn't change
-    /// across invocations of the program.
-    #[error("Cannot reload config options for unknown interface \"{0}\".")]
-    UnknownInterface(String),
-}
-
-/// The main entry point to implementing an extcap program. This application can
-/// be run by passing it into [`ExtcapArgs::run`]. For details on how to use
-/// this, see the [crate] documentation.
-pub trait ExtcapApplication {
-    /// Returns the metadata like version info and help URL for this program.
-    /// This is used by Wireshark to display in the UI.
-    ///
-    /// The [`cargo_metadata`] macro can be used to create this from data in
-    /// `Cargo.toml`.
-    fn metadata(&self) -> &Metadata;
-
-    /// List the interfaces supported by this application. Wireshark calls this
-    /// when the application starts up to populate the list of available
-    /// interfaces. Since that interface list is cached and the interface names
-    /// can be used later when the user tries to start a capture session, the
-    /// interface list should stay as consistent as possible. If the list of
-    /// interfaces can change, the extcap program must be prepared to handle
-    /// `UnknownInterface` from the result.
-    fn interfaces(&self) -> Vec<&Interface>;
-
-    /// List the toolbar controls for this interface. In Wireshark, this is
-    /// presented to the user in View > Interface Toolbars. See the
-    /// documentation in [`controls`] for details.
-    fn toolbar_controls(&self) -> Vec<&dyn ToolbarControl>;
-
-    /// List the configurable UI elements for this interface. This is presented
-    /// to the user when they click on the gear icon next to the capture
-    /// interface name, or if they try to start a capture that is lacking a
-    /// required config value.
-    fn configs(&self, interface: &Interface) -> Vec<&dyn ConfigTrait>;
-
-    /// List the interfaces and toolbar controls supported by this extcap
-    /// implementation in stdout for Wireshark's consumption. Corresponds to the
-    /// `--extcap-interfaces` argument in extcap.
-    fn list_interfaces(&self) {
-        self.metadata().print_sentence();
-        for interface in self.interfaces() {
-            interface.print_sentence();
-        }
-        for control in self.toolbar_controls() {
-            control.print_sentence();
-        }
-    }
-
-    /// List the configs available for the given interface in stdout for
-    /// Wireshark's consumption. Corresponds to the `--extcap-config` argument
-    /// in extcap.
-    fn list_configs(&self, interface: &str) -> Result<(), ListConfigError> {
-        let interface_obj = self
-            .interfaces()
-            .into_iter()
-            .find(|i| i.value == interface)
-            .ok_or_else(|| ListConfigError::UnknownInterface(String::from(interface)))?;
-        for config in self.configs(interface_obj) {
-            config.print_sentence();
-        }
-        Ok(())
-    }
-
-    /// Reloads the available options for a given config and prints them out for
-    /// Wireshark's consumption. The default implementation looks up config returned from `configs` and calls its reload function. Corresponds to the `--extcap-reload-option`
-    /// argument in extcap.
-    fn reload_config(&self, interface: &str, config: &str) -> Result<(), ReloadConfigError> {
-        let i = self
-            .interfaces()
-            .into_iter()
-            .find(|i| i.value == interface)
-            .ok_or_else(|| ReloadConfigError::UnknownInterface(String::from(interface)))?;
-        let selector_config = self
-            .configs(i)
-            .into_iter()
-            .find(|c| c.call() == config)
-            .ok_or_else(|| ReloadConfigError::UnknownConfig(String::from(config)))?
-            .as_any()
-            .downcast_ref::<SelectorConfig>()
-            .ok_or_else(|| ReloadConfigError::UnsupportedConfig(String::from(config)))?;
-        let Reload { reload_fn, .. } = selector_config
-            .reload
-            .as_ref()
-            .ok_or_else(|| ReloadConfigError::UnsupportedConfig(String::from(config)))?;
-        for opt in reload_fn() {
-            opt.print_sentence(selector_config.config_number);
-        }
-        Ok(())
-    }
-
-    /// Prints the DLT to stdout for consumption by Wireshark. The default
-    /// implementation provided takes the DLT from the interfaces returned from
-    /// [`interfaces`][Self::interfaces] and prints out the correct one.
-    /// Corresponds to the `--extcap-dlts` argument in extcap.
-    fn print_dlt(&self, interface: &str) -> Result<(), PrintDltError> {
-        self.interfaces()
-            .iter()
-            .find(|i| i.value == interface)
-            .ok_or_else(|| PrintDltError::UnknownInterface(String::from(interface)))?
-            .dlt
-            .print_sentence();
-        Ok(())
     }
 }
 
