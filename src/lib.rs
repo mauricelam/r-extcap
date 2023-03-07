@@ -26,8 +26,9 @@
 //!
 //! To create an extcap using this library, these are the high level steps:
 //!
-//! 1. Create a struct with `#[derive(clap::Parser)]`, and add [`ExtcapArgs`] as
-//!    one of the fields with the `#[command(flatten)]` attribute.
+//! 1. Create a struct with `#[derive(clap::Parser)]`, and add
+//!    [`ExtcapArgs`](crate::ExtcapArgs) as one of the fields with the
+//!    `#[command(flatten)]` attribute.
 //!
 //!    ```
 //!    #[derive(Debug, clap::Parser)]
@@ -39,27 +40,33 @@
 //!    }
 //!    ```
 //!
-//! 2. In a `lazy_static`, define the necessary [interfaces][Interface],
-//!    [toolbar controls][ToolbarControl], and [configs][ConfigTrait]. If you
-//!    are unsure, you can simply start with the [`Interfaces`][Interface] you
-//!    want to capture and add the others later as needed.
+//! 2. In a `lazy_static`, define the necessary
+//!    [interfaces](crate::interface::Interface), [toolbar
+//!    controls](crate::controls::ToolbarControl), and
+//!    [configs](crate::config::ConfigTrait). If you are unsure, you can simply
+//!    start with the [`Interfaces`](crate::interface::Interface) you want to
+//!    capture and add the others later as needed.
 //!
-//! 3. In the `main` function, parse the arguments and call [`ExtcapArgs::run`].
-//!    Use the returned [`ExtcapStep`] to perform the requested operation. There
-//!    are 5 steps:
+//! 3. In the `main` function, parse the arguments and call
+//!    [`ExtcapArgs::run`](crate::ExtcapArgs::run). Use the returned
+//!    [`ExtcapStep`](crate::ExtcapStep) to perform the requested operation.
+//!    There are 5 steps:
 //!
-//!     1. [`InterfacesStep`]: List the interfaces that can be captured by this
-//!            program, as well as the metadata and toolbar controls associated.
-//!     2. [`DltsStep`]: Prints the DLTs for a given interface.
-//!     3. [`ConfigStep`]: Optional, provide a list of UI configuration options
-//!            that the user can change.
-//!     4. [`ReloadConfigStep`]: Optional, if [`SelectorConfig::reload`] is
-//!            configured in one of the configs, invoked to reload the list of
-//!            options the user can choose from.
-//!     5. [`CaptureStep`]: described below.
+//!     1. [`InterfacesStep`](crate::InterfacesStep): List the interfaces that
+//!            can be captured by this program, as well as the metadata and
+//!            toolbar controls associated.
+//!     2. [`DltsStep`](crate::DltsStep): Prints the DLTs for a given interface.
+//!     3. [`ConfigStep`](crate::ConfigStep): Optional, provide a list of UI
+//!            configuration options that the user can change.
+//!     4. [`ReloadConfigStep`](crate::ReloadConfigStep): Optional, if
+//!            [`SelectorConfig::reload`](crate::config::SelectorConfig)
+//!            is configured in one of the configs, invoked to reload the list
+//!            of options the user can choose from.
+//!     5. [`CaptureStep`](crate::CaptureStep): described below.
 //!
-//!  4. In the [`CaptureStep`], start capturing packets from the external
-//!    interface, and write the packets to [`CaptureContext::fifo`] using the
+//!  4. In the [`CaptureStep`](crate::CaptureStep), start capturing packets from
+//!    the external interface, and write the packets to
+//!    [`CaptureStep::fifo`](crate::CaptureStep) using the
 //!    [`pcap_file`](https://docs.rs/pcap-file/latest/pcap_file/index.html)
 //!    crate.
 //!

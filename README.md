@@ -1,6 +1,9 @@
-# Write Wireshark extcap programs in Rust
+# r-extcap
 
-### [Documentation](https://docs.rs/r-extcap/latest)
+<!-- cargo-rdme start -->
+
+Write [extcap](https://www.wireshark.org/docs/man-pages/extcap.html)
+programs in Rust.
 
 The extcap interface is a versatile plugin interface used by Wireshark to
 allow external binaries to act as capture interfaces. The extcap interface
@@ -8,7 +11,7 @@ itself is generic and can be used by applications other than Wireshark, like
 Wireshark's command line sibling `tshark`. For the sake of brevity, in the
 documentation we will refer to the host application simply as Wireshark.
 
-### Extcap overview
+#### Extcap overview
 
 1. `--extcap-interfaces`: In this step, Wireshark asks the extcap for its
    list of supported interfaces, version metadata, and the list of toolbar
@@ -23,14 +26,15 @@ documentation we will refer to the host application simply as Wireshark.
    capturing packets. Captured packets should be written to the `--fifo` in
    the PCAP format.
 
-## Getting started
+### Getting started
 
 To create an extcap using this library, these are the high level steps:
 
-1. Create a struct with `#[derive(clap::Parser)]`, and add `ExtcapArgs` as
-   one of the fields with the `#[command(flatten)]` attribute.
+1. Create a struct with `#[derive(clap::Parser)]`, and add
+   [`ExtcapArgs`](https://docs.rs/r-extcap/latest/r_extcap/struct.ExtcapArgs.html) as one of the fields with the
+   `#[command(flatten)]` attribute.
 
-   ```rs
+   ```rust
    #[derive(Debug, clap::Parser)]
    struct AppArgs {
        #[command(flatten)]
@@ -40,49 +44,41 @@ To create an extcap using this library, these are the high level steps:
    }
    ```
 
-2. Create a struct that implements `ExtcapApplication`. It is recommended
-   to define the application in a `lazy_static`. There 4 things need to be
-   provided for an extcap implementation:
+2. In a `lazy_static`, define the necessary
+   [interfaces](https://docs.rs/r-extcap/latest/r_extcap/interface/struct.Interface.html), [toolbar
+   controls](https://docs.rs/r-extcap/latest/r_extcap/controls/trait.ToolbarControl.html), and
+   [configs](https://docs.rs/r-extcap/latest/r_extcap/config/trait.ConfigTrait.html). If you are unsure, you can simply
+   start with the [`Interfaces`](https://docs.rs/r-extcap/latest/r_extcap/interface/struct.Interface.html) you want to
+   capture and add the others later as needed.
 
-    1. `metadata`: The version information and metadata for this program,
-            used by Wireshark to display in the UI.
-    2. `interfaces`: The list of interfaces
-           that can be captured by this program.
-    3. `toolbar_controls`: Optional,
-           a list of toolbar controls shown in the Wireshark UI.
-    4. `configs`: Optional, a list of UI
+3. In the `main` function, parse the arguments and call
+   [`ExtcapArgs::run`](https://docs.rs/r-extcap/latest/r_extcap/struct.ExtcapArgs.html#method.run). Use the returned
+   [`ExtcapStep`](https://docs.rs/r-extcap/latest/r_extcap/enum.ExtcapStep.html) to perform the requested operation.
+   There are 5 steps:
+
+    1. [`InterfacesStep`](https://docs.rs/r-extcap/latest/r_extcap/struct.InterfacesStep.html): List the interfaces that
+           can be captured by this program, as well as the metadata and
+           toolbar controls associated.
+    2. [`DltsStep`](https://docs.rs/r-extcap/latest/r_extcap/struct.DltsStep.html): Prints the DLTs for a given interface.
+    3. [`ConfigStep`](https://docs.rs/r-extcap/latest/r_extcap/struct.ConfigStep.html): Optional, provide a list of UI
            configuration options that the user can change.
+    4. [`ReloadConfigStep`](https://docs.rs/r-extcap/latest/r_extcap/struct.ReloadConfigStep.html): Optional, if
+           [`SelectorConfig::reload`](https://docs.rs/r-extcap/latest/r_extcap/config/struct.SelectorConfig.html)
+           is configured in one of the configs, invoked to reload the list
+           of options the user can choose from.
+    5. [`CaptureStep`](https://docs.rs/r-extcap/latest/r_extcap/struct.CaptureStep.html): described below.
 
-3. In the `main` function, parse the arguments and call `ExtcapArgs::run`.
-   Use the returned `CaptureContext` to start capturing packets, and write
-   the packets to `CaptureContext::fifo` using the
+ 4. In the [`CaptureStep`](https://docs.rs/r-extcap/latest/r_extcap/struct.CaptureStep.html), start capturing packets from
+   the external interface, and write the packets to
+   [`CaptureStep::fifo`](https://docs.rs/r-extcap/latest/r_extcap/struct.CaptureStep.html) using the
    [`pcap_file`](https://docs.rs/pcap-file/latest/pcap_file/index.html)
    crate.
 
-   ```rs
-   fn main() -> anyhow::Result<()> {
-       if let Some(capture_context) = AppArgs::parse().extcap.run(&*APPLICATION)? {
-           // Run capture
-       }
-       Ok(())
-   }
-   ```
+## Example
 
-# Example
-
-```rs
-use lazy_static::lazy_static;
+```rust
 use clap::Parser;
-use r_extcap::{ExtcapApplication, ExtcapArgs};
-use r_extcap::{interface::*, controls::*, config::*};
-
-struct ExampleExtcapApplication {}
-impl ExtcapApplication for ExampleExtcapApplication {
-      fn metadata(&self) -> &Metadata { todo!() }
-      fn interfaces(&self) -> &[Interface] { todo!() }
-      fn toolbar_controls(&self) -> Vec<&dyn ToolbarControl> { todo!() }
-      fn configs(&self, interface: &Interface) -> Vec<&dyn ConfigTrait> { todo!() }
-}
+use r_extcap::{cargo_metadata, ExtcapArgs, ExtcapStep, interface::*, controls::*, config::*};
 
 #[derive(Debug, Parser)]
 struct AppArgs {
@@ -91,14 +87,46 @@ struct AppArgs {
 }
 
 lazy_static! {
-    static ref APPLICATION: ExampleExtcapApplication = ExampleExtcapApplication {
-        // ...
-    };
+    // static ref CONFIG_FOO: SelectorConfig = ...;
+    // static ref CONFIG_BAR: StringConfig = ...;
+
+    // static ref CONTROL_A: BooleanControl = ...;
+
+    // static ref INTERFACE_1: Interface = ...;
 }
 
 fn main() -> anyhow::Result<()> {
-    if let Some(capture_context) = AppArgs::parse().extcap.run(&*APPLICATION)? {
-        // Run capture
+    match AppArgs::parse().extcap.run()? {
+        ExtcapStep::Interfaces(interfaces_step) => {
+            interfaces_step.list_interfaces(
+                &cargo_metadata!(),
+                &[
+                    // &*INTERFACE_1,
+                ],
+                &[
+                    // &*CONTROL_A,
+                    // &*CONTROL_B,
+                ],
+            );
+        }
+        ExtcapStep::Dlts(dlts_step) => {
+            dlts_step.print_from_interfaces(&[
+                // &*INTERFACE_1,
+            ])?;
+        }
+        ExtcapStep::Config(config_step) => config_step.list_configs(&[
+            // &*CONFIG_FOO,
+            // &*CONFIG_BAR,
+        ]),
+        ExtcapStep::ReloadConfig(reload_config_step) => {
+            reload_config_step.reload_from_configs(&[
+                // &*CONFIG_FOO,
+                // &*CONFIG_BAR,
+            ])?;
+        }
+        ExtcapStep::Capture(capture_step) => {
+            // Run capture
+        }
     }
     Ok(())
 }
@@ -108,3 +136,5 @@ References:
 * <https://www.wireshark.org/docs/wsdg_html_chunked/ChCaptureExtcap.html>
 * <https://www.wireshark.org/docs/man-pages/extcap.html>
 * <https://gitlab.com/wireshark/wireshark/-/blob/master/doc/extcap_example.py>
+
+<!-- cargo-rdme end -->
