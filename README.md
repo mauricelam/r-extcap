@@ -138,3 +138,9 @@ References:
 * <https://gitlab.com/wireshark/wireshark/-/blob/master/doc/extcap_example.py>
 
 <!-- cargo-rdme end -->
+
+# Contributions
+
+Contributions of any form are appreciated. New features, bug fixes,
+documentation improvements, additional tests, or PRs with failing test cases are
+welcome.
