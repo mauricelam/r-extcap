@@ -14,7 +14,7 @@ description = "Extcap example program for Rust"
 name = "extcap-example"
 
 [dependencies]
-r-extcap = {version = "0.1.0", path = ".."}
+r-extcap = {version = "0.2.0", path = ".."}
 lazy_static = "1.4.0"
 env_logger = "0.10.0"
 regex = "1.7.1"
