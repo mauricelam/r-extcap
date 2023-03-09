@@ -2,6 +2,7 @@
 
 [![Build status](https://github.com/mauricelam/r-extcap/workflows/ci/badge.svg)](https://github.com/mauricelam/r-extcap/actions)
 [![Crates.io](https://img.shields.io/crates/v/r-extcap.svg)](https://crates.io/crates/r-extcap)
+[![Docs.rs](https://img.shields.io/badge/docs-rustdoc-green)](https://docs.rs/r-extcap)
 
 <!-- cargo-rdme start -->
 
