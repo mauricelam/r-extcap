@@ -15,6 +15,7 @@ use r_extcap::{
 use std::{
     fmt::Display,
     io::{stdout, Write},
+    num::ParseIntError,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -448,15 +449,14 @@ fn main() -> anyhow::Result<()> {
                 endianness: pcap_file::Endianness::Big,
                 ..Default::default()
             };
-            let mut pcap_writer = PcapWriter::with_header(capture_step.fifo, pcap_header).unwrap();
+            let mut pcap_writer = PcapWriter::with_header(capture_step.fifo, pcap_header)?;
             let mut data_packet = 0;
             let data_total = DATA.len() / 20 + 1;
 
             for i in 0..usize::MAX {
                 if let (Some(control_reader), Some(control_sender)) = &mut controls {
                     if let Some(control_packet) = control_reader.try_read_packet() {
-                        handle_control_packet(&control_packet, control_sender, &mut app_state)
-                            .unwrap();
+                        handle_control_packet(&control_packet, control_sender, &mut app_state)?;
                     }
 
                     CONTROL_LOGGER
@@ -489,10 +489,10 @@ fn main() -> anyhow::Result<()> {
                     app_state.message.as_bytes(),
                     app_state.verify,
                 );
-                let packet = pcap_fake_packet(&out, &args.fake_ip, i);
+                let packet = pcap_fake_packet(&out, &args.fake_ip, i)?;
 
                 pcap_writer.write_packet(&PcapPacket::new(
-                    SystemTime::now().duration_since(UNIX_EPOCH).unwrap(),
+                    SystemTime::now().duration_since(UNIX_EPOCH)?,
                     (packet.len() + 14 + 20) as u32,
                     &packet,
                 ))?;
@@ -530,9 +530,8 @@ fn handle_control_packet(
                 log = Some(format!("Message = {}", msg));
                 app_state.message = msg;
             } else if control_packet.control_number == CONTROL_DELAY.control_number {
-                app_state.delay = std::str::from_utf8(control_packet.payload.as_ref())?
-                    .parse::<u8>()
-                    .unwrap();
+                app_state.delay =
+                    std::str::from_utf8(control_packet.payload.as_ref())?.parse::<u8>()?;
                 log = Some(format!("Time delay = {}", app_state.delay));
             } else if control_packet.control_number == CONTROL_VERIFY.control_number {
                 // Only read this after initialized
@@ -578,58 +577,62 @@ fn create_out_packet(
     message: &[u8],
     verify: bool,
 ) -> Vec<u8> {
-    let mut result = Vec::<u8>::new();
     let remote_str = remote.to_string();
-    result.push(remote_str.len() as u8);
-    result.extend_from_slice(remote_str.as_bytes());
-    result.push(data_packet as u8);
-    result.push(data_total as u8);
-    result.push(data_sub.len() as u8);
-    result.extend_from_slice(data_sub);
-    result.push(message.len() as u8);
-    result.extend_from_slice(message);
-    result.push(u8::from(verify));
-    result
+    [
+        &[remote_str.len() as u8],
+        remote_str.as_bytes(),
+        &[data_packet as u8],
+        &[data_total as u8],
+        &[data_sub.len() as u8],
+        data_sub,
+        &[message.len() as u8],
+        message,
+        &[u8::from(verify)],
+    ]
+    .concat()
+    .to_vec()
 }
 
-fn pcap_fake_packet(message: &[u8], fake_ip: &str, iterate_counter: usize) -> Vec<u8> {
-    let mut result = Vec::<u8>::new();
-
+fn pcap_fake_packet(
+    message: &[u8],
+    fake_ip: &str,
+    iterate_counter: usize,
+) -> Result<Vec<u8>, ParseIntError> {
     // ETH
-    let mut dest_value = 0x2900_u16;
-    let mut src_value = 0x3400_u16;
-    if iterate_counter % 2 == 0 {
-        std::mem::swap(&mut dest_value, &mut src_value);
-    }
+    let (dest_value, src_value) = if iterate_counter % 2 == 0 {
+        (0x2900_u16, 0x3400_u16)
+    } else {
+        (0x3400_u16, 0x2900_u16)
+    };
 
-    result.extend_from_slice(&dest_value.to_le_bytes());
-    result.extend_from_slice(&dest_value.to_le_bytes());
-    result.extend_from_slice(&dest_value.to_le_bytes());
-    result.extend_from_slice(&src_value.to_le_bytes());
-    result.extend_from_slice(&src_value.to_le_bytes());
-    result.extend_from_slice(&src_value.to_le_bytes());
-    result.extend_from_slice(&8_u16.to_le_bytes()); // protocol (ip)
+    let result = [
+        &dest_value.to_le_bytes()[..],
+        &dest_value.to_le_bytes(),
+        &dest_value.to_le_bytes(),
+        &src_value.to_le_bytes(),
+        &src_value.to_le_bytes(),
+        &src_value.to_le_bytes(),
+        &8_u16.to_le_bytes(), // protocol (ip)
+        &[0x45_u8],           // IP version
+        &[0],
+        &((message.len() + 20) as u16).to_be_bytes(),
+        &0_u16.to_be_bytes(), // Identification
+        &[0x40],              // Don't fragment
+        &[0],                 // Fragment offset
+        &[0x40_u8],
+        &[0xFE_u8],           // (2 = unspecified)
+        &0_u16.to_be_bytes(), // Checksum
+        &fake_ip
+            .split('.')
+            .map(|p| p.parse::<u8>())
+            .collect::<Result<Vec<u8>, ParseIntError>>()?,
+        &[0x7f, 0x00, 0x00, 0x01], // Dest IP
+        message,
+    ]
+    .concat()
+    .to_vec();
 
-    result.push(0x45_u8); // IP version
-    result.push(0);
-    result.extend_from_slice(&((message.len() + 20) as u16).to_be_bytes());
-    result.extend_from_slice(&0_u16.to_be_bytes()); // Identification
-    result.push(0x40); // Don't fragment
-    result.push(0); // Fragment offset
-    result.push(0x40_u8);
-    result.push(0xFE_u8); // (2 = unspecified)
-    result.extend_from_slice(&0_u16.to_be_bytes()); // Checksum
-
-    let parts: Vec<u8> = fake_ip
-        .split('.')
-        .map(|p| p.parse::<u8>().unwrap())
-        .collect();
-    result.extend_from_slice(&parts);
-    result.extend_from_slice(&[0x7f, 0x00, 0x00, 0x01]); // Dest IP
-
-    result.extend_from_slice(message);
-
-    result
+    Ok(result)
 }
 
 fn validate_capture_filter(filter: &str) {
