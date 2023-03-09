@@ -1,5 +1,8 @@
 # r-extcap
 
+[![Build status](https://github.com/mauricelam/r-extcap/workflows/ci/badge.svg)](https://github.com/mauricelam/r-extcap/actions)
+[![Crates.io](https://img.shields.io/crates/v/r-extcap.svg)](https://crates.io/crates/r-extcap)
+
 <!-- cargo-rdme start -->
 
 Write [extcap](https://www.wireshark.org/docs/man-pages/extcap.html)
