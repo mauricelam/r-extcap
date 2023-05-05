@@ -448,7 +448,11 @@ pub enum ExtcapError {
 ///         This is an extcap plugin meant to be used with Wireshark or tshark.
 ///         To install this plugin for use with Wireshark, symlink or copy this executable \
 ///         to your Wireshark extcap directory
-///           mkdir -p ~/.config/wireshark/extcap/ && ln -s \"{executable_path}\" \"~/.config/wireshark/extcap/{exe_name}\"\
+///
+///         For Wireshark 4.0 or before:
+///           mkdir -p \"$HOME/.config/wireshark/extcap/\" && ln -s \"{executable_path}\" \"$HOME/.config/wireshark/extcap/{exe_name}\"
+///         For Wireshark 4.1 or later:
+///           mkdir -p \"$HOME/.local/lib/wireshark/extcap/\" && ln -s \"{executable_path}\" \"$HOME/.local/lib/wireshark/extcap/{exe_name}\"\
 ///     "}
 /// )
 /// ```
@@ -458,7 +462,12 @@ pub fn installation_instructions() -> String {
         .and_then(|exe| {
             let path = exe.to_string_lossy();
             let name = exe.file_name()?.to_string_lossy();
-            Some(format!("\n  mkdir -p ~/.config/wireshark/extcap/ && ln -s \"{path}\" \"~/.config/wireshark/extcap/{name}\""))
+            Some(format!(concat!(
+                "\n\nFor Wireshark 4.0 or before:\n",
+                "  mkdir -p \"$HOME/.config/wireshark/extcap/\" && ln -s \"{path}\" \"$HOME/.config/wireshark/extcap/{name}\"\n",
+                "For Wireshark 4.1 or later:\n",
+                "  mkdir -p \"$HOME/.local/lib/wireshark/extcap/\" && ln -s \"{path}\" \"$HOME/.local/lib/wireshark/extcap/{name}\"",
+            ), path = path, name = name))
         })
         .unwrap_or_default();
     format!(
