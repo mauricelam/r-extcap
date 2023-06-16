@@ -27,6 +27,7 @@ pcap-file = "2.0.0"
 thiserror = "1.0.40"
 tokio = { version = "1.28.2", features = ["full"], optional = true }
 typed-builder = "0.14.0"
+libc = "0.2.146"
 
 [features]
 default = ["sync", "async"]

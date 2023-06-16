@@ -282,9 +282,25 @@ impl ExtcapControlSender {
     ///
     /// * `out_path`: The path specified by the `--extcap-control-out` flag.
     pub async fn new(out_path: &Path) -> Self {
-        Self {
-            out_file: tokio::net::unix::pipe::OpenOptions::new().open_sender(out_path).unwrap(),
+        use std::time::Duration;
+
+        for i in 0..50 {
+            match tokio::net::unix::pipe::OpenOptions::new().open_sender(out_path) {
+                Ok(out_file) => return Self { out_file },
+                Err(e) => {
+                    if let Some(libc::ENXIO) = e.raw_os_error() {
+                        // This seems sketchy, but the docs for pipe::Sender says "The file is a
+                        // FIFO, but no process has it open for reading. Sleep for a while and try
+                        // again"
+                        // https://docs.rs/tokio/latest/tokio/net/unix/pipe/struct.Sender.html
+                        tokio::time::sleep(Duration::from_millis(i * 100)).await;
+                    } else {
+                        panic!("{e:?}");
+                    }
+                },
+            };
         }
+        panic!("Failed waiting for extcap-control-out to be opened");
     }
 
     #[cfg(target_os = "windows")]

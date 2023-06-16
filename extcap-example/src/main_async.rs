@@ -5,7 +5,7 @@ use pcap_file::{
     DataLink,
 };
 use r_extcap::{
-    controls::synchronous::{ExtcapControlSender, ExtcapControlSenderTrait},
+    controls::asynchronous::{ExtcapControlSender, ExtcapControlSenderTrait},
     controls::*,
     ExtcapStep,
 };
@@ -18,28 +18,40 @@ mod common;
 
 use common::*;
 
-fn control_write_defaults(
+async fn control_write_defaults(
     extcap_control: &mut ExtcapControlSender,
     message: &str,
     delay: u8,
     verify: bool,
 ) -> anyhow::Result<()> {
-    CONTROL_MESSAGE.set_value(message).send(extcap_control)?;
+    CONTROL_MESSAGE
+        .set_value(message)
+        .send_async(extcap_control)
+        .await?;
     CONTROL_BUTTON
         .set_label(&delay.to_string())
-        .send(extcap_control)?;
-    CONTROL_VERIFY.set_checked(verify).send(extcap_control)?;
+        .send_async(extcap_control)
+        .await?;
+    CONTROL_VERIFY
+        .set_checked(verify)
+        .send_async(extcap_control)
+        .await?;
 
     for i in 1..16 {
         CONTROL_DELAY
             .add_value(&i.to_string(), Some(&format!("{i} sec")))
-            .send(extcap_control)?;
+            .send_async(extcap_control)
+            .await?;
     }
-    CONTROL_DELAY.remove_value("60").send(extcap_control)?;
+    CONTROL_DELAY
+        .remove_value("60")
+        .send_async(extcap_control)
+        .await?;
     Ok(())
 }
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     env_logger::init();
     debug!("argv: {:?}", std::env::args());
     let args = AppArgs::parse();
@@ -114,22 +126,27 @@ fn main() -> anyhow::Result<()> {
             at nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culp \
             a qui officia deserunt mollit anim id est laborum.";
             let mut controls = (
-                capture_step.spawn_channel_control_reader(),
-                capture_step.new_control_sender(),
+                capture_step.spawn_channel_control_reader_async(),
+                capture_step.new_control_sender_async().await,
             );
             if let (Some(control_reader), Some(control_sender)) = &mut controls {
-                let packet = control_reader.read_packet()?;
+                let packet = control_reader
+                    .read_packet()
+                    .await
+                    .ok_or_else(|| anyhow::anyhow!("Unable to read packet"))?;
                 assert_eq!(packet.command, ControlCommand::Initialized);
 
                 CONTROL_LOGGER
                     .clear_and_add_log(format!("Log started at {:?}", SystemTime::now()).into())
-                    .send(control_sender)?;
+                    .send_async(control_sender)
+                    .await?;
                 control_write_defaults(
                     control_sender,
                     &app_state.message,
                     app_state.delay,
                     app_state.verify,
-                )?;
+                )
+                .await?;
             }
 
             let pcap_header = PcapHeader {
@@ -143,13 +160,15 @@ fn main() -> anyhow::Result<()> {
 
             for i in 0..usize::MAX {
                 if let (Some(control_reader), Some(control_sender)) = &mut controls {
-                    if let Some(control_packet) = control_reader.try_read_packet() {
-                        handle_control_packet(&control_packet, control_sender, &mut app_state)?;
+                    if let Some(control_packet) = control_reader.try_read_packet().await {
+                        handle_control_packet(&control_packet, control_sender, &mut app_state)
+                            .await?;
                     }
 
                     CONTROL_LOGGER
                         .add_log(format!("Received packet #{counter}").into())
-                        .send(control_sender)?;
+                        .send_async(control_sender)
+                        .await?;
                     counter += 1;
 
                     debug!(
@@ -158,8 +177,11 @@ fn main() -> anyhow::Result<()> {
                     );
 
                     if app_state.button_disabled {
-                        CONTROL_BUTTON.set_enabled(true).send(control_sender)?;
-                        control_sender.info_message("Turn action finished.")?;
+                        CONTROL_BUTTON
+                            .set_enabled(true)
+                            .send_async(control_sender)
+                            .await?;
+                        control_sender.info_message("Turn action finished.").await?;
                         app_state.button_disabled = false;
                     }
                 }
@@ -194,7 +216,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn handle_control_packet(
+async fn handle_control_packet(
     control_packet: &ControlPacket<'_>,
     control_sender: &mut ExtcapControlSender,
     app_state: &mut CaptureState,
@@ -217,18 +239,27 @@ fn handle_control_packet(
                 if app_state.initialized {
                     app_state.verify = control_packet.payload[0] != 0_u8;
                     log = Some(format!("Verify = {:?}", app_state.verify));
-                    control_sender.status_message("Verify changed")?;
+                    control_sender.status_message("Verify changed").await?;
                 }
             } else if control_packet.control_number == CONTROL_BUTTON.control_number {
-                CONTROL_BUTTON.set_enabled(false).send(control_sender)?;
+                CONTROL_BUTTON
+                    .set_enabled(false)
+                    .send_async(control_sender)
+                    .await?;
                 debug!("Got button control event. button={}", app_state.button);
                 app_state.button_disabled = true;
                 if app_state.button {
-                    CONTROL_BUTTON.set_label("Turn on").send(control_sender)?;
+                    CONTROL_BUTTON
+                        .set_label("Turn on")
+                        .send_async(control_sender)
+                        .await?;
                     app_state.button = false;
                     log = Some(String::from("Button turned off"));
                 } else {
-                    CONTROL_BUTTON.set_label("Turn off").send(control_sender)?;
+                    CONTROL_BUTTON
+                        .set_label("Turn off")
+                        .send_async(control_sender)
+                        .await?;
                     app_state.button = true;
                     log = Some(String::from("Button turned on"));
                 }
@@ -242,7 +273,10 @@ fn handle_control_packet(
         _ => panic!("Unexpected control command {:?}", control_packet.command),
     }
     if let Some(log) = log {
-        CONTROL_LOGGER.add_log(log.into()).send(control_sender)?;
+        CONTROL_LOGGER
+            .add_log(log.into())
+            .send_async(control_sender)
+            .await?;
     }
     debug!("Read control packet Loop end");
     Ok(())
