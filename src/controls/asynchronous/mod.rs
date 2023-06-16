@@ -20,14 +20,15 @@ use nom_derive::Parse;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 use tokio::{
-    fs::File,
     io::{AsyncReadExt, AsyncWriteExt},
     sync::{
         mpsc::{self, error::SendError},
         Mutex,
     },
-    task::JoinHandle,
+    task::JoinHandle, net::unix::pipe::{Receiver, Sender},
 };
+#[cfg(target_os = "windows")]
+use tokio::fs::File;
 
 pub mod util;
 use util::AsyncReadExt as _;
@@ -141,14 +142,32 @@ impl ChannelExtcapControlReader {
 pub struct ExtcapControlReader {
     /// The file to read the control packets from. This is the fifo passed with
     /// the `--extcap-control-in` flag.
+    #[cfg(not(target_os = "windows"))]
+    in_file: Receiver,
+    /// The file to read the control packets from. This is the fifo passed with
+    /// the `--extcap-control-in` flag.
+    #[cfg(target_os = "windows")]
     in_file: File,
 }
 
 impl ExtcapControlReader {
+
     /// Creates a new instance of [`ExtcapControlReader`].
     ///
     /// * `in_path`: The path of the extcap control pipe passed with
     ///   `--extcap-control-in`.
+    #[cfg(not(target_os = "windows"))]
+    pub async fn new(in_path: &Path) -> Self {
+        Self {
+            in_file: tokio::net::unix::pipe::OpenOptions::new().open_receiver(in_path).unwrap(),
+        }
+    }
+
+    /// Creates a new instance of [`ExtcapControlReader`].
+    ///
+    /// * `in_path`: The path of the extcap control pipe passed with
+    ///   `--extcap-control-in`.
+    #[cfg(target_os = "windows")]
     pub async fn new(in_path: &Path) -> Self {
         Self {
             in_file: File::open(in_path).await.unwrap(),
@@ -251,10 +270,24 @@ pub trait ExtcapControlSenderTrait: Send + Sync + Sized {
 /// A sender for the extcap control packets. `out_file` should be the file given
 /// by the `--extcap-control-out` flag.
 pub struct ExtcapControlSender {
+    #[cfg(not(target_os = "windows"))]
+    out_file: Sender,
+    #[cfg(target_os = "windows")]
     out_file: File,
 }
 
 impl ExtcapControlSender {
+    #[cfg(not(target_os = "windows"))]
+    /// Creates a new instance of [`ExtcapControlSender`].
+    ///
+    /// * `out_path`: The path specified by the `--extcap-control-out` flag.
+    pub async fn new(out_path: &Path) -> Self {
+        Self {
+            out_file: tokio::net::unix::pipe::OpenOptions::new().open_sender(out_path).unwrap(),
+        }
+    }
+
+    #[cfg(target_os = "windows")]
     /// Creates a new instance of [`ExtcapControlSender`].
     ///
     /// * `out_path`: The path specified by the `--extcap-control-out` flag.
