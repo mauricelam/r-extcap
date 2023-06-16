@@ -17,16 +17,16 @@ members = ["extcap-example"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.69"
-async-trait = { version = "0.1.64", optional = true }
-clap = { version = "4.1.4", features = ["derive"] }
-log = "0.4.17"
+anyhow = "1.0.71"
+async-trait = { version = "0.1.68", optional = true }
+clap = { version = "4.3.4", features = ["derive"] }
+log = "0.4.19"
 nom = "7.1.3"
-nom-derive = "0.10.0"
+nom-derive = "0.10.1"
 pcap-file = "2.0.0"
-thiserror = "1.0.38"
-tokio = { version = "1.25.0", features = ["full"], optional = true }
-typed-builder = "0.13.0"
+thiserror = "1.0.40"
+tokio = { version = "1.28.2", features = ["full"], optional = true }
+typed-builder = "0.14.0"
 
 [features]
 default = ["sync", "async"]
@@ -35,6 +35,6 @@ sync = []
 
 [dev-dependencies]
 env_logger = "0.10.0"
-indoc = "2.0.0"
-regex = "1.7.1"
+indoc = "2.0.1"
+regex = "1.8.4"
 lazy_static = "1.4.0"
