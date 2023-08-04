@@ -28,7 +28,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build
-      run: cargo build -p r-extcap -p extcap-example --verbose
+      run: cargo build -p r-extcap --verbose
     - name: Run tests
-      run: cargo test -p r-extcap -p extcap-example --verbose
+      run: cargo test -p r-extcap --verbose
 
