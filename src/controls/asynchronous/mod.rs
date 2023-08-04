@@ -19,16 +19,18 @@ use log::debug;
 use nom_derive::Parse;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
+#[cfg(target_os = "windows")]
+use tokio::fs::File;
+#[cfg(not(target_os = "windows"))]
+use tokio::net::unix::pipe::{Receiver, Sender};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     sync::{
         mpsc::{self, error::SendError},
         Mutex,
     },
-    task::JoinHandle, net::unix::pipe::{Receiver, Sender},
+    task::JoinHandle,
 };
-#[cfg(target_os = "windows")]
-use tokio::fs::File;
 
 pub mod util;
 use util::AsyncReadExt as _;
@@ -151,7 +153,6 @@ pub struct ExtcapControlReader {
 }
 
 impl ExtcapControlReader {
-
     /// Creates a new instance of [`ExtcapControlReader`].
     ///
     /// * `in_path`: The path of the extcap control pipe passed with
@@ -159,7 +160,9 @@ impl ExtcapControlReader {
     #[cfg(not(target_os = "windows"))]
     pub async fn new(in_path: &Path) -> Self {
         Self {
-            in_file: tokio::net::unix::pipe::OpenOptions::new().open_receiver(in_path).unwrap(),
+            in_file: tokio::net::unix::pipe::OpenOptions::new()
+                .open_receiver(in_path)
+                .unwrap(),
         }
     }
 
@@ -297,7 +300,7 @@ impl ExtcapControlSender {
                     } else {
                         panic!("{e:?}");
                     }
-                },
+                }
             };
         }
         panic!("Failed waiting for extcap-control-out to be opened");
