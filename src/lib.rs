@@ -142,10 +142,12 @@ use controls::ToolbarControl;
 use interface::{Interface, Metadata};
 use std::{
     fmt::Display,
-    fs::File,
     path::{Path, PathBuf},
 };
 use thiserror::Error;
+
+#[cfg(not(target_os = "windows"))]
+use std::fs::File;
 
 pub mod config;
 pub mod controls;
@@ -393,7 +395,22 @@ impl ExtcapArgs {
                 Ok(ExtcapStep::Dlts(DltsStep { interface }))
             } else if self.capture {
                 let fifo_path = self.fifo.as_ref().ok_or(CaptureError::MissingFifo)?;
+
+                #[cfg(target_os = "windows")]
+                let fifo = {
+                    use std::os::windows::prelude::OpenOptionsExt;
+                    std::fs::OpenOptions::new()
+                        .write(true)
+                        .create(true)
+                        // Sets the flag value to `SecurityIdentification`.
+                        .security_qos_flags(0x10000)
+                        .open(fifo_path)
+                        .map_err(CaptureError::Io)?
+                };
+
+                #[cfg(not(target_os = "windows"))]
                 let fifo = File::create(fifo_path).map_err(CaptureError::Io)?;
+
                 let interface = self
                     .extcap_interface
                     .as_ref()
