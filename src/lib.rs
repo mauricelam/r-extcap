@@ -65,10 +65,10 @@
 //!     5. [`CaptureStep`](crate::CaptureStep): described below.
 //!
 //!  4. In the [`CaptureStep`](crate::CaptureStep), start capturing packets from
-//!    the external interface, and write the packets to
-//!    [`CaptureStep::fifo`](crate::CaptureStep) using the
-//!    [`pcap_file`](https://docs.rs/pcap-file/latest/pcap_file/index.html)
-//!    crate.
+//!     the external interface, and write the packets to
+//!     [`CaptureStep::fifo`](crate::CaptureStep) using the
+//!     [`pcap_file`](https://docs.rs/pcap-file/latest/pcap_file/index.html)
+//!     crate.
 //!
 //! # Example
 //!
