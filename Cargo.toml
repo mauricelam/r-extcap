@@ -35,7 +35,6 @@ async = ["tokio", "async-trait"]
 sync = []
 
 [dev-dependencies]
-env_logger = "0.10.0"
 indoc = "2.0.1"
 regex = "1.8.4"
 lazy_static = "1.4.0"
