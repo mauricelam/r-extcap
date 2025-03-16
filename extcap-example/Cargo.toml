@@ -24,7 +24,7 @@ path = "src/main_async_read_control_pipe.rs"
 [dependencies]
 r-extcap = {version = "0.2.0", path = ".."}
 lazy_static = "1.4.0"
-env_logger = "0.10.0"
+env_logger = "0.11"
 regex = "1.7.1"
 clap = { version = "4.1.7", features = ["derive"] }
 anyhow = "1.0.69"
