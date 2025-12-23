@@ -318,7 +318,7 @@ impl ExtcapControlSender {
 }
 
 #[async_trait]
-impl<'a> ExtcapControlSenderTrait for &'a mut ExtcapControlSender {
+impl ExtcapControlSenderTrait for &mut ExtcapControlSender {
     async fn send(self, packet: ControlPacket<'_>) -> Result<(), tokio::io::Error> {
         debug!("Sending extcap control message: {packet:#?}");
         self.out_file.write_all(&packet.to_header_bytes()).await?;

@@ -1,16 +1,16 @@
 use clap::Parser;
 use log::debug;
 use pcap_file::{
-    pcap::{PcapHeader, PcapPacket, PcapWriter},
     DataLink,
+    pcap::{PcapHeader, PcapPacket, PcapWriter},
 };
 use r_extcap::{
+    ExtcapStep,
     controls::asynchronous::{ExtcapControlSender, ExtcapControlSenderTrait},
     controls::*,
-    ExtcapStep,
 };
 use std::{
-    io::{stdout, Write},
+    io::{Write, stdout},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -56,11 +56,11 @@ async fn main() -> anyhow::Result<()> {
     debug!("argv: {:?}", std::env::args());
     let args = AppArgs::parse();
     debug!("Args: {args:?}");
-    if !args.extcap.capture {
-        if let Some(filter) = args.extcap.extcap_capture_filter {
-            validate_capture_filter(&filter);
-            std::process::exit(0);
-        }
+    if !args.extcap.capture
+        && let Some(filter) = args.extcap.extcap_capture_filter
+    {
+        validate_capture_filter(&filter);
+        std::process::exit(0);
     }
     debug!("Running app");
     match args.extcap.run()? {

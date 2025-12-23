@@ -1,14 +1,20 @@
-use std::{process::Command, fs::File};
-use assert_cmd::{prelude::{CommandCargoExt, OutputAssertExt}, assert::Assert};
+use assert_cmd::{assert::Assert, prelude::OutputAssertExt};
 use indoc::indoc;
-use nix::{sys::{stat, signal::{self, Signal}}, unistd::Pid};
+use nix::{
+    sys::{
+        signal::{self, Signal},
+        stat,
+    },
+    unistd::Pid,
+};
 use predicates::prelude::*;
-use wait_timeout::ChildExt;
 use std::time::Duration;
+use std::{fs::File, process::Command};
+use wait_timeout::ChildExt;
 
 #[test]
 fn interfaces() {
-    let mut cmd = Command::cargo_bin("extcap-example").unwrap();
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("extcap-example"));
     cmd.args(["--extcap-interfaces"]);
     cmd.assert()
         .success()
@@ -35,7 +41,7 @@ fn interfaces() {
 
 #[test]
 fn config() {
-    let mut cmd = Command::cargo_bin("extcap-example").unwrap();
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("extcap-example"));
     cmd.args(["--extcap-interface", "rs-example1", "--extcap-config"]);
     cmd.assert()
         .success()
@@ -72,7 +78,7 @@ fn config() {
 
 #[test]
 fn config_reload_options() {
-    let mut cmd = Command::cargo_bin("extcap-example").unwrap();
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("extcap-example"));
     cmd.args(["--extcap-interface", "rs-example1"])
         .arg("--extcap-config")
         .args(["--extcap-reload-option", "remote"])
@@ -87,7 +93,7 @@ fn config_reload_options() {
 
 #[test]
 fn print_dlt() {
-    let mut cmd = Command::cargo_bin("extcap-example").unwrap();
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!("extcap-example"));
     cmd.args(["--extcap-interface", "rs-example1", "--extcap-dlts"]);
     cmd.assert().success().stdout(predicate::str::diff(
         "dlt {number=147}{name=USER0}{display=Demo Implementation for Extcap}\n",
@@ -103,7 +109,7 @@ fn capture() {
     nix::unistd::mkfifo(&control_in_fifo, stat::Mode::S_IRUSR).unwrap();
     let control_out_fifo = tempdir.path().join("control-out-fifo");
     nix::unistd::mkfifo(&control_out_fifo, stat::Mode::S_IWUSR).unwrap();
-    let mut cmd = assert_cmd::Command::cargo_bin("extcap-example").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("extcap-example");
     cmd.args(["--extcap-interface", "rs-example1"]);
     cmd.args(["--capture"]);
     cmd.args(["--fifo", capture_fifo.to_string_lossy().as_ref()]);
@@ -111,8 +117,14 @@ fn capture() {
     cmd.args(["--message", "hi"]);
     cmd.args(["--verify"]);
     cmd.args(["--remote", "if2"]);
-    cmd.args(["--extcap-control-in", control_in_fifo.to_string_lossy().as_ref()]);
-    cmd.args(["--extcap-control-out", control_out_fifo.to_string_lossy().as_ref()]);
+    cmd.args([
+        "--extcap-control-in",
+        control_in_fifo.to_string_lossy().as_ref(),
+    ]);
+    cmd.args([
+        "--extcap-control-out",
+        control_out_fifo.to_string_lossy().as_ref(),
+    ]);
     cmd.timeout(Duration::from_secs(2));
     cmd.assert().interrupted();
 }
@@ -126,7 +138,7 @@ fn capture_async() {
     nix::unistd::mkfifo(&control_in_fifo, stat::Mode::S_IRWXU).unwrap();
     let control_out_fifo = tempdir.path().join("control-out-fifo");
     nix::unistd::mkfifo(&control_out_fifo, stat::Mode::S_IRWXU).unwrap();
-    let mut cmd = assert_cmd::Command::cargo_bin("extcap-example-async").unwrap();
+    let mut cmd = assert_cmd::cargo::cargo_bin_cmd!("extcap-example-async");
     cmd.args(["--extcap-interface", "rs-example1"]);
     cmd.args(["--capture"]);
     cmd.args(["--fifo", capture_fifo.to_string_lossy().as_ref()]);
@@ -134,8 +146,14 @@ fn capture_async() {
     cmd.args(["--message", "hi"]);
     cmd.args(["--verify"]);
     cmd.args(["--remote", "if2"]);
-    cmd.args(["--extcap-control-in", control_in_fifo.to_string_lossy().as_ref()]);
-    cmd.args(["--extcap-control-out", control_out_fifo.to_string_lossy().as_ref()]);
+    cmd.args([
+        "--extcap-control-in",
+        control_in_fifo.to_string_lossy().as_ref(),
+    ]);
+    cmd.args([
+        "--extcap-control-out",
+        control_out_fifo.to_string_lossy().as_ref(),
+    ]);
     cmd.timeout(Duration::from_secs(2));
     cmd.assert().interrupted();
 }
@@ -164,16 +182,31 @@ fn capture_read_pipe() -> anyhow::Result<()> {
             println!("Cancelled. Dropping file handles");
         });
 
-        let mut cmd = Command::cargo_bin("extcap-example-read-control-pipe").unwrap();
+        let mut cmd = Command::new(assert_cmd::cargo::cargo_bin!(
+            "extcap-example-read-control-pipe"
+        ));
         cmd.args(["--extcap-interface", "rs-example1"]);
         cmd.args(["--capture"]);
         cmd.args(["--fifo", capture_fifo.to_string_lossy().as_ref()]);
-        cmd.args(["--extcap-control-in", control_in_fifo.to_string_lossy().as_ref()]);
-        cmd.args(["--extcap-control-out", control_out_fifo.to_string_lossy().as_ref()]);
+        cmd.args([
+            "--extcap-control-in",
+            control_in_fifo.to_string_lossy().as_ref(),
+        ]);
+        cmd.args([
+            "--extcap-control-out",
+            control_out_fifo.to_string_lossy().as_ref(),
+        ]);
         let mut child_proc = cmd.spawn().unwrap();
         // Wait for the ctrl-C handler to engage
-        assert_eq!(child_proc.wait_timeout(Duration::from_millis(500)).unwrap(), None);
-        signal::kill(Pid::from_raw(child_proc.id().try_into().unwrap()), Signal::SIGINT).unwrap();
+        assert_eq!(
+            child_proc.wait_timeout(Duration::from_millis(500)).unwrap(),
+            None
+        );
+        signal::kill(
+            Pid::from_raw(child_proc.id().try_into().unwrap()),
+            Signal::SIGINT,
+        )
+        .unwrap();
         println!("Sent SIGINT to child proc");
 
         let output = child_proc.wait_with_output().unwrap();

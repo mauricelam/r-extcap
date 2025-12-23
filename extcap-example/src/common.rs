@@ -8,11 +8,7 @@ use r_extcap::{
     controls::*,
     interface::{Dlt, Interface, Metadata},
 };
-use std::{
-    fmt::Display,
-    num::ParseIntError,
-    time::Duration,
-};
+use std::{fmt::Display, num::ParseIntError, time::Duration};
 
 lazy_static! {
     pub static ref CONFIG_DELAY: IntegerConfig = IntegerConfig::builder()
@@ -364,7 +360,7 @@ pub fn pcap_fake_packet(
     iterate_counter: usize,
 ) -> Result<Vec<u8>, ParseIntError> {
     // ETH
-    let (dest_value, src_value) = if iterate_counter % 2 == 0 {
+    let (dest_value, src_value) = if iterate_counter.is_multiple_of(2) {
         (0x2900_u16, 0x3400_u16)
     } else {
         (0x3400_u16, 0x2900_u16)

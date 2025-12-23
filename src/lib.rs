@@ -53,15 +53,15 @@
 //!    There are 5 steps:
 //!
 //!     1. [`InterfacesStep`](crate::InterfacesStep): List the interfaces that
-//!            can be captured by this program, as well as the metadata and
-//!            toolbar controls associated.
+//!        can be captured by this program, as well as the metadata and
+//!        toolbar controls associated.
 //!     2. [`DltsStep`](crate::DltsStep): Prints the DLTs for a given interface.
 //!     3. [`ConfigStep`](crate::ConfigStep): Optional, provide a list of UI
-//!            configuration options that the user can change.
+//!        configuration options that the user can change.
 //!     4. [`ReloadConfigStep`](crate::ReloadConfigStep): Optional, if
-//!            [`SelectorConfig::reload`](crate::config::SelectorConfig)
-//!            is configured in one of the configs, invoked to reload the list
-//!            of options the user can choose from.
+//!        [`SelectorConfig::reload`](crate::config::SelectorConfig)
+//!        is configured in one of the configs, invoked to reload the list
+//!        of options the user can choose from.
 //!     5. [`CaptureStep`](crate::CaptureStep): described below.
 //!
 //!  4. In the [`CaptureStep`](crate::CaptureStep), start capturing packets from
@@ -378,7 +378,7 @@ impl ExtcapArgs {
     /// from their `main` functions.
     ///
     /// For detailed usage, see the [crate documentation][crate]
-    pub fn run(&self) -> Result<ExtcapStep, ExtcapError> {
+    pub fn run(&self) -> Result<ExtcapStep<'_>, ExtcapError> {
         if self.extcap_interfaces {
             Ok(ExtcapStep::Interfaces(InterfacesStep))
         } else if let Some(interface) = &self.extcap_interface {

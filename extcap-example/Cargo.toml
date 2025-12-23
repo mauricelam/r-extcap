@@ -5,7 +5,7 @@
 [package]
 name = "extcap-example"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 homepage = "https://gitlab.com/wireshark/wireshark/-/blob/master/doc/extcap_example.py"
 description = "Extcap example program for Rust"
 
@@ -22,20 +22,20 @@ name = "extcap-example-read-control-pipe"
 path = "src/main_async_read_control_pipe.rs"
 
 [dependencies]
-r-extcap = {version = "0.2.0", path = ".."}
-lazy_static = "1.4.0"
-env_logger = "0.11"
-regex = "1.7.1"
-clap = { version = "4.1.7", features = ["derive"] }
-anyhow = "1.0.69"
+r-extcap = {version = "0.2.5", path = ".."}
+lazy_static = "1.5.0"
+env_logger = "0.11.8"
+regex = "1.12.2"
+clap = { version = "4.5.53", features = ["derive"] }
+anyhow = "1.0.100"
 pcap-file = "2.0.0"
-log = "0.4.17"
-tokio = { version = "1.28.2", features = ["full"] }
+log = "0.4.29"
+tokio = { version = "1.48.0", features = ["full"] }
 
 [dev-dependencies]
-assert_cmd = "2.0.8"
-indoc = "2.0.0"
+assert_cmd = "2.1.1"
+indoc = "2.0.7"
 nix = "0.26.2"
-predicates = "2.1.5"
-tempfile = "3.4.0"
-wait-timeout = "0.2.0"
+predicates = "3.1.3"
+tempfile = "3.23.0"
+wait-timeout = "0.2.1"

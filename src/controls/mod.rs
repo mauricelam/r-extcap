@@ -450,7 +450,7 @@ impl StringControl {
     /// Panics: If the string is longer than 32767 bytes.
     pub fn set_value<'a>(&self, message: &'a str) -> ControlPacket<'a> {
         assert!(
-            message.as_bytes().len() <= 32767,
+            message.len() <= 32767,
             "message must not be longer than 32767 bytes"
         );
         ControlPacket::new_with_payload(
